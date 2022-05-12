@@ -1,4 +1,5 @@
-var num = "marvin"
-var bool = false
+var num = 10
+var str = "ola"
+var ok = 9.2
 
-print("bool var type: ", $bool.type, ", ", "num var type: ", $num.type)
+print("as ", $ok, $str, $num)

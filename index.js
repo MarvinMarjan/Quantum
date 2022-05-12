@@ -178,7 +178,7 @@ while (line[index] !== undefined) {
 
             // the argument is a variable
             if (args[i].indexOf("$") === 0) {
-                if (regex.keywords.varProp.test(args[i])) {
+                if (regex.keywords.varProp.test(args[i]) && args[i].indexOf(".") !== -1) {
                     let prop = args[i].match(regex.keywords.varProp);
 
                     prop.forEach((v, i) => {
