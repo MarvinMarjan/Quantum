@@ -1,7 +1,4 @@
 var num = "marvin"
+var bool = false
 
-$num = "carlos"
-var num2 = 10
-$num = false
-
-print($num, $num2)
+print("bool var type: ", $bool.type, ", ", "num var type: ", $num.type)

@@ -75,14 +75,24 @@ function getType(v) {
     return type;
 }
 
+function getVar(name) {
+    let varObj = {
+        name: vars[name].name,
+        value: vars[name].value,
+        type: vars[name].type
+    }
+
+    return varObj;
+}
+
 // an object containing the regexs that are used
 const regex = {
     // function regexs
     functions: {
-        getFunc: /(\w+)\(/,
+        getFunc: /(\w+)\(/m,
 
-        // get all print args
-        printArgs: /(?:"(.*?)")?(\d+)?(\$\w+)?/gm
+        // get all args
+        getArgs: /(?:"(.*?)")?(\d+)?(\$\w+\.?\w+)?/gm
     },
 
     // keywords regexs
@@ -93,7 +103,8 @@ const regex = {
         var: /^(?:\w+)\s(\w+)\s?(=)\s?(.+)/gm,
 
         // var reassignment
-        varRTB: /^(?:\$)(\w+)\s?(=)\s?(.+)$/m
+        varRTB: /^(?:\$)(\w+)\s?(=)\s?(.+)$/m,
+        varProp: /(\w+)?/gm
     }
 }
 
@@ -152,7 +163,7 @@ while (line[index] !== undefined) {
     
     // detect if the function is "print"
     if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "print") {
-        let args = funcLine.input.match(regex.functions.printArgs);
+        let args = funcLine.input.match(regex.functions.getArgs);
 
         let varName;
         let string = "";
@@ -167,12 +178,31 @@ while (line[index] !== undefined) {
 
             // the argument is a variable
             if (args[i].indexOf("$") === 0) {
-                varName = args[i].substring(1);
+                if (regex.keywords.varProp.test(args[i])) {
+                    let prop = args[i].match(regex.keywords.varProp);
+
+                    prop.forEach((v, i) => {
+                        if (v == false) {
+                            prop.splice(i, 1)
+                        }
+                    })
+
+                    let aux = getVar(prop[0]);
+
+                    let tempVar = new Var(aux.name, aux.type, aux.value);
+
+                    string += Var.getProp(prop, tempVar.prop);
+                    continue;
+                }
+
+                else {
+                    varName = args[i].substring(1);
+                }
             }
 
             if (varName) {
                 try {
-                    string += qtRemove(vars[varName].value);
+                    string += qtRemove(getVar(varName).value);
                     varName = null;
                 }
 

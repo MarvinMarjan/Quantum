@@ -3,6 +3,42 @@ class Var {
         this.name = name;
         this.type = type;
         this.value = value;
+
+        this.prop = {
+            type: this.type
+        };
+    }
+
+    static getProp(prop, targProp) {
+        function through(obj) {
+            for (let v in obj) {
+                if (v === prop[i]) {
+                    if (typeof v === "object") {
+                        i++;
+                        through(v)
+                    }
+
+                    else {
+                        return v;
+                    }
+                }
+            }
+        }
+
+        let i = 1;
+
+        for (let item in targProp) {
+            if (item === prop[i]) {
+                if (typeof item === "object") {
+                    i++;
+                    return through(item);
+                }
+
+                else {
+                    return targProp[item];
+                }
+            }
+        }
     }
 }
 
