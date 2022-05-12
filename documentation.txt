@@ -1,0 +1,49 @@
+functions {
+    print: print a value in the console {
+        syntax {
+            print(args...)
+        }
+
+        example {
+            print("hello, world"),
+
+            print("my name is ", "paul")
+
+            print($*varname)
+        }
+    }
+
+    clear: clear the console {
+        syntax {
+            clear()
+        }
+    }
+}
+
+keywords {
+    var: create a variable {
+        syntax {
+            var varName = varValue
+        }
+
+        example {
+            var num = 10
+
+            print($num)
+        }
+
+        console {
+            10
+        }
+
+        we can also reassign a value {
+            $num = 5
+
+            print($num)
+        }
+
+        console {
+            5
+        }
+    }
+}
