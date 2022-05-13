@@ -1,6 +1,15 @@
 // Classes
 import Terminal from "./modules/terminal.js";
 import Var from "./modules/var.js";
+import NumExp from "./modules/numexp.js"
+
+// let exp = "";
+
+// let num = new NumExp(exp);
+
+// console.log(num.exp);
+
+
 
 // Functions
 import getCommand from "./cli.js";
@@ -59,11 +68,11 @@ function getType(v) {
         type = "string";
     }
 
-    else if (auxRegex.float.test(v.input)) {
+    else if (auxRegex.float.test(v[3])) {
         type = "float";
     }
 
-    else if (auxRegex.number.test(v.input)) {
+    else if (auxRegex.number.test(v[3])) {
         type = "number";
     }
 
@@ -95,6 +104,11 @@ const regex = {
         getArgs: /(?:"(.*?)")?(\d+)?(\$\w+\.?\w+)?/gm
     },
 
+    identifiers: {
+        // get a numExpression
+        numExp: /<(.+)>/m
+    },
+
     // keywords regexs
     keywords: {
         getKeyWord: /^\w+/gm,
@@ -104,6 +118,8 @@ const regex = {
 
         // var reassignment
         varRTB: /^(?:\$)(\w+)\s?(=)\s?(.+)$/m,
+
+        // gets var propertys
         varProp: /(\w+)?/gm
     }
 }
@@ -151,6 +167,14 @@ while (line[index] !== undefined) {
         varLine = regex.keywords.var.exec(varLine);
 
         if (varLine[2] === "=") {
+            if (regex.identifiers.numExp.test(varLine.input)) {
+                let exp = varLine.input.match(regex.identifiers.numExp)
+
+                let numExp = new NumExp(exp[1]);
+
+                varLine[3] = String(numExp.result); // varLine[3] is the var value index
+            }
+
             let type = getType(varLine);
 
             // new var
