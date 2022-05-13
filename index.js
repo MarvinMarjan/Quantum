@@ -120,7 +120,10 @@ const regex = {
         varRTB: /^(?:\$)(\w+)\s?(=)\s?(.+)$/m,
 
         // gets var propertys
-        varProp: /(\w+)?/gm
+        varProp: /(\w+)?/gm,
+
+        // contains var
+        varIn: /\$(\w+)/gm
     }
 }
 
@@ -169,6 +172,23 @@ while (line[index] !== undefined) {
         if (varLine[2] === "=") {
             if (regex.identifiers.numExp.test(varLine.input)) {
                 let exp = varLine.input.match(regex.identifiers.numExp)
+                
+                if (regex.keywords.varIn.test(varLine.input)) {
+                    let varExp = varLine.input.match(regex.keywords.varIn);
+                    let aux = regex.identifiers.numExp.exec(varLine[3]);
+                    let rplcExp = aux[1];
+
+                    for (let i = 0; i < varExp.length; i++) {
+                        varExp.forEach((v, i) => {
+                            let auxVar = getVar(varExp[i].substring(1));
+                            let tempRegex = new RegExp("\\" + v, "g");
+
+                            rplcExp = rplcExp.replace(tempRegex, auxVar.value);
+                        });
+
+                        exp[1] = `${rplcExp}`
+                    }
+                }
 
                 let numExp = new NumExp(exp[1]);
 

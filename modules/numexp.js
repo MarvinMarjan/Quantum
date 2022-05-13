@@ -32,11 +32,13 @@ class NumExp {
         else {
             exps = exp.match(regex.getMath);
 
-            exps.forEach((v, i) => {
-                if (i > 0) {
-                    exps[0] += v;
-                }
-            })
+            if (exps.length > 0) {
+                exps.forEach((v, i) => {
+                    if (i > 0) {
+                        exps[0] += v;
+                    }
+                });
+            }
 
             exps = exps[0].split(" ");
         }
