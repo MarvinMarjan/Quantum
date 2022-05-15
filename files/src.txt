@@ -1,0 +1,17 @@
+print("hello, world")
+
+if ("hello" == "hello") {
+    var num = 2
+    
+    print($num.type)
+}
+
+if (2 >= 2) {
+    print("é maior que dois")
+}
+
+if (true == false) {
+    var bool = true
+
+    print("bool: ", $bool, ", type: ", $bool.type)
+}

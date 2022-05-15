@@ -2,14 +2,7 @@
 import Terminal from "./modules/terminal.js";
 import Var from "./modules/var.js";
 import NumExp from "./modules/numexp.js"
-
-// let exp = "";
-
-// let num = new NumExp(exp);
-
-// console.log(num.exp);
-
-
+import Condition from "./modules/condition.js";
 
 // Functions
 import getCommand from "./cli.js";
@@ -17,6 +10,7 @@ import error from "./modules/err.js";
 
 // node js
 import fs from "fs";
+import { exec } from "child_process";
 
 // terminal class instantiation
 const terminal = new Terminal("Terminal");
@@ -84,6 +78,7 @@ function getType(v) {
     return type;
 }
 
+
 function getVar(name) {
     let varObj = {
         name: vars[name].name,
@@ -106,7 +101,8 @@ const regex = {
 
     identifiers: {
         // get a numExpression
-        numExp: /<(.+)>/m
+        numExp: /<(.+)>/m,
+        condition: /\((.+)\)/m
     },
 
     // keywords regexs
@@ -123,7 +119,7 @@ const regex = {
         varProp: /(\w+)?/gm,
 
         // contains var
-        varIn: /\$(\w+)/gm
+        varIn: /\$(\w+)/gm,
     }
 }
 
@@ -135,142 +131,217 @@ let vars = {};
 
 // each line
 let line = file.match(regex.functions.print);
+
+// a bug solve
+line.input += "\\n";
+
+// separating lines
 line = line.input.split("\n");
 
 // line index
 let index = 0;
 
+main(line, index);
+
 // until the file ends
-while (line[index] !== undefined) {
-    let funcLine = line[index].match(regex.functions.getFunc);
-    let keyword = line[index].match(regex.keywords.getKeyWord);
-
-    // detects a reassignment of a variable
-    if (regex.keywords.varRTB.test(line[index])) {
-        var varRTB_ln = line[index].match(regex.keywords.varRTB);
-
-        if (varExists(varRTB_ln[1])) {
-            vars[varRTB_ln[1]].value = qtRemove(varRTB_ln[3]);
-        }
-
-        else {
-            error(`${varRTB_ln[1]} is undefined`);
-        }
-    }
-
-    // empty line
-    if (line[index] == false) {
-        index++;
-        continue;
-    }
-
-    // detect if the keyword is "var"
-    if (regex.keywords.getKeyWord.test(line[index]) && keyword[0] === "var") {
-        let varLine = line[index].match(regex.keywords.var);
-        varLine = regex.keywords.var.exec(varLine);
-
-        if (varLine[2] === "=") {
-            if (regex.identifiers.numExp.test(varLine.input)) {
-                let exp = varLine.input.match(regex.identifiers.numExp)
-                
-                if (regex.keywords.varIn.test(varLine.input)) {
-                    let varExp = varLine.input.match(regex.keywords.varIn);
-                    let aux = regex.identifiers.numExp.exec(varLine[3]);
-                    let rplcExp = aux[1];
-
-                    for (let i = 0; i < varExp.length; i++) {
-                        varExp.forEach((v, i) => {
-                            let auxVar = getVar(varExp[i].substring(1));
-                            let tempRegex = new RegExp("\\" + v, "g");
-
-                            rplcExp = rplcExp.replace(tempRegex, auxVar.value);
-                        });
-
-                        exp[1] = `${rplcExp}`
-                    }
-                }
-
-                let numExp = new NumExp(exp[1]);
-
-                varLine[3] = String(numExp.result); // varLine[3] is the var value index
-            }
-
-            let type = getType(varLine);
-
-            // new var
-            let varObj = new Var(varLine[1], type, varLine[3])
-
-            //save var
-            vars[varObj.name] = varObj;
-        }
-    }
+function main(line, index, ignore=null) {
+    while (line[index] !== undefined) {
+        let funcLine = line[index].match(regex.functions.getFunc);
+        let keyword = line[index].match(regex.keywords.getKeyWord);
     
-    // detect if the function is "print"
-    if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "print") {
-        let args = funcLine.input.match(regex.functions.getArgs);
-
-        let varName;
-        let string = "";
-        
-        for (let i = 0; i < args.length; i++) {
-            varName = undefined;
-
-            if (args[i] == false) {
-                args.splice(i, 0);
-                continue;
+        // detects a reassignment of a variable
+        if (regex.keywords.varRTB.test(line[index])) {
+            var varRTB_ln = line[index].match(regex.keywords.varRTB);
+    
+            if (varExists(varRTB_ln[1])) {
+                vars[varRTB_ln[1]].value = qtRemove(varRTB_ln[3]);
+            }
+    
+            else {
+                error(`${varRTB_ln[1]} is undefined`);
+            }
+        }
+    
+        // empty line
+        if (line[index] == false) {
+            index++;
+            continue;
+        }
+    
+        // detect if the keyword is "var"
+        if (regex.keywords.getKeyWord.test(line[index]) && keyword[0] === "var") {
+            let varLine = line[index].match(regex.keywords.var);
+            varLine = regex.keywords.var.exec(varLine);
+    
+            if (varLine[2] === "=") {
+                if (regex.identifiers.numExp.test(varLine.input)) {
+                    let exp = varLine.input.match(regex.identifiers.numExp)
+                    
+                    if (regex.keywords.varIn.test(varLine.input)) {
+                        let varExp = varLine.input.match(regex.keywords.varIn);
+                        let aux = regex.identifiers.numExp.exec(varLine[3]);
+                        let rplcExp = aux[1];
+    
+                        for (let i = 0; i < varExp.length; i++) {
+                            varExp.forEach((v, i) => {
+                                let auxVar = getVar(varExp[i].substring(1));
+                                let tempRegex = new RegExp("\\" + v, "g");
+    
+                                rplcExp = rplcExp.replace(tempRegex, auxVar.value);
+                            });
+    
+                            exp[1] = `${rplcExp}`
+                        }
+                    }
+    
+                    let numExp = new NumExp(exp[1]);
+    
+                    varLine[3] = String(numExp.result); // varLine[3] is the var value index
+                }
+    
+                let type = getType(varLine);
+    
+                // new var
+                let varObj = new Var(varLine[1], type, varLine[3])
+    
+                //save var
+                vars[varObj.name] = varObj;
+            }
+        }
+    
+        else if (((keyword !== null) ? keyword[0] : "") === "if") {
+            let cond = regex.identifiers.condition.exec(line[index]);
+            let retn = new Condition(cond[1]);
+    
+            while (typeof retn.return[0] === "object") {
+                retn.return = [...retn.return[0]];
             }
 
-            // the argument is a variable
-            if (args[i].indexOf("$") === 0) {
-                if (regex.keywords.varProp.test(args[i]) && args[i].indexOf(".") !== -1) {
-                    let prop = args[i].match(regex.keywords.varProp);
+            retn.return = retn.return[0];
+    
+            if (retn.return && line[index][line[index].length - 2] === "{") {
+                index++ // new line
+                let auxIndex = 0;
+                let blockLine;
+                let block = [];
 
-                    prop.forEach((v, i) => {
-                        if (v == false) {
-                            prop.splice(i, 1)
-                        }
-                    })
+                blockLine = line.filter((v, i) => {
+                    if (i >= index && v !== "}") {
+                        return true;
+                    }
 
-                    let aux = getVar(prop[0]);
+                    else {
+                        return false;
+                    }
+                });
 
-                    let tempVar = new Var(aux.name, aux.type, aux.value);
+                blockLine.forEach(v => {
+                    block.push(v.trimStart());
+                })
 
-                    string += Var.getProp(prop, tempVar.prop);
+                auxIndex = main(block, auxIndex, "if");
+
+                index = auxIndex + index;
+            }
+
+            else {
+                line.forEach((v, i) => {
+                    if (v[0] === "}") {
+                        index = i + index;
+                    }
+                })
+            }
+        }
+        
+        // detect if the function is "print"
+        if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "print") {
+            let args = funcLine.input.match(regex.functions.getArgs);
+    
+            let varName;
+            let string = "";
+            
+            for (let i = 0; i < args.length; i++) {
+                varName = undefined;
+    
+                if (args[i] == false) {
+                    args.splice(i, 0);
                     continue;
                 }
-
-                else {
-                    varName = args[i].substring(1);
-                }
-            }
-
-            if (varName) {
-                try {
-                    string += qtRemove(getVar(varName).value);
-                    varName = null;
-                }
-
-                catch {
-                    if (!varExists(varName)) {
-                        error(`${varName} is undefined`)
+    
+                // the argument is a variable
+                if (args[i].indexOf("$") === 0) {
+                    if (regex.keywords.varProp.test(args[i]) && args[i].indexOf(".") !== -1) {
+                        let prop = args[i].match(regex.keywords.varProp);
+    
+                        prop.forEach((v, i) => {
+                            if (v == false) {
+                                prop.splice(i, 1)
+                            }
+                        })
+    
+                        let aux = getVar(prop[0]);
+    
+                        let tempVar = new Var(aux.name, aux.type, aux.value);
+    
+                        string += Var.getProp(prop, tempVar.prop);
+                        continue;
+                    }
+    
+                    else {
+                        varName = args[i].substring(1);
                     }
                 }
+    
+                if (varName) {
+                    try {
+                        string += qtRemove(getVar(varName).value);
+                        varName = null;
+                    }
+    
+                    catch {
+                        if (!varExists(varName)) {
+                            error(`${varName} is undefined`)
+                        }
+                    }
+                }
+    
+                string += (varName) ? "" : (varName !== undefined) ? "" : qtRemove(args[i]);
+                
             }
-
-            string += (varName) ? "" : (varName !== undefined) ? "" : qtRemove(args[i]);
-            
+    
+            args = string;
+    
+            terminal.print(args);
         }
-
-        args = string;
-
-        terminal.print(args);
+    
+        // detect if the function is "clear"
+        else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "clear") {
+            terminal.clear();
+        }
+    
+        else if(regex.functions.getFunc.test(funcLine) && funcLine[1] === "exec") {
+            let aux = funcLine.input.match(regex.functions.getArgs);
+    
+            aux = aux.filter(v => {
+                if (v != false) {
+                    return true;
+                }
+    
+                else {
+                    return false;
+                }
+            })
+    
+            aux = qtRemove(...aux);
+    
+            exec(aux);
+        }
+    
+        // next line
+        index++;
     }
 
-    // detect if the function is "clear"
-    else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "clear") {
-        terminal.clear();
-    }
-
-    // next line
-    index++;
+    return index;
 }
+
+export {qtRemove, getType};
