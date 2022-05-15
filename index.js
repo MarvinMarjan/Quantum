@@ -11,11 +11,22 @@ import error from "./modules/err.js";
 // node js
 import fs from "fs";
 import { exec } from "child_process";
+import os from "os"
+
+/*let test = os.networkInterfaces();
+
+console.log(test);*/
 
 // terminal class instantiation
 const terminal = new Terminal("Terminal");
 
-// get the source code file
+/**
+ * opens a file and returns its contents
+ * 
+ * @param {*} argv file path 
+ * @returns file content
+ */
+
 async function getFile(argv) {
     const encoding = "utf-8";
     let file = await fs.promises.readFile(argv, encoding);
@@ -23,7 +34,12 @@ async function getFile(argv) {
     return file;
 }
 
-// removes " from strings
+/**
+ * remove quotes from a string
+ * 
+ * @param {*} str string to remove quotes
+ * @returns a string with quotes removed
+ */
 function qtRemove(str) {
     let string = "";
 
@@ -40,12 +56,22 @@ function qtRemove(str) {
     return string; // a string without quotes "
 }
 
-// returns true if the variable passed as an argument exists
+/**
+ * detects if a variable exists
+ * 
+ * @param {*} v the var name
+ * @returns true if the variable exists
+ */
 function varExists(v) {
     return (vars[v] === undefined) ? false : true;
 }
 
-// returns the type of the variable according to the value
+/**
+ * returns the type of a variable
+ * 
+ * @param {*} v var name
+ * @returns 
+ */
 function getType(v) {
     let auxRegex = {
         number: /\d+$/,
@@ -81,7 +107,12 @@ function getType(v) {
     return type;
 }
 
-
+/**
+ * returns an object containing the data of a variable
+ * 
+ * @param {*} name var name
+ * @returns var name, var value, var type
+ */
 function getVar(name) {
     let varObj = {
         name: vars[name].name,
@@ -92,6 +123,45 @@ function getVar(name) {
     return varObj;
 }
 
+/**
+ * returns an array containing the lines of a code block
+ * 
+ * @param {*} line line array
+ * @param {*} index line index
+ * @returns block lines
+ */
+function getBlock(line, index) {
+    let blockLine;
+    let block = [];
+
+    // get all lines inside the block
+    blockLine = line.filter((v, i) => {
+        if (i >= index && v[0] !== "}") {
+            return true;
+        }
+
+        else {
+            return false;
+        }
+    });
+
+    // remove indentation
+    blockLine.forEach(v => {
+        block.push(v.trimStart());
+    })
+
+    return block;
+}
+
+/**
+ * this function is used in the assignment of a variable, 
+ * if there is a condition in the value of the variable this 
+ * function will change the condition to true or false, depending.
+ * 
+ * @param {*} line line where the function goes looking for the condition
+ * @param {*} array an array containing the space-separated line for the exchange of values
+ * @returns an array with the exchanged values
+ */
 function condRetn(line, array) {
     let aux = line.match(regex.identifiers.condition);
 
@@ -102,6 +172,12 @@ function condRetn(line, array) {
     return array;
 }
 
+/**
+ * concatenates all arguments of a function
+ * 
+ * @param {*} funcLine a line containing a function
+ * @returns all function arguments concatenated
+ */
 function concatArgs(funcLine) {
     let args = funcLine.input.match(regex.functions.getFull);
     args = args[1];
@@ -179,7 +255,30 @@ function concatArgs(funcLine) {
     return string;
 }
 
-// an object containing the regexs that are used
+/**
+ * ignore a block of code
+ * 
+ * @param {*} index current index
+ * @param {*} line code block lines
+ * @returns an index whose all lines have been skipped
+ */
+function ignoreBlock(index, line) {
+    for (let i = index; i < line.length; i++) {
+        if (line[i][0] === "}") {
+            break;
+        }
+
+        else {
+            index++
+        }
+    }
+
+    return index;
+}
+
+/**
+ * an object containing all the regexs used in the code
+ */
 const regex = {
     // function regexs
     functions: {
@@ -216,19 +315,49 @@ const regex = {
     }
 }
 
-// source file
+// ========================================== global vars ============================================
+
+/**
+ * source file
+ */
 const file = await getFile(getCommand());
 
-// an object containing all the variables
+/**
+ * an object containing all variables
+ */
 let vars = {};
 
-// each line
+/**
+ * "else" use this
+ * 
+ * @example 
+ * 
+ * if (2 == 2) {
+ *     print("equals 2")
+ * }
+ * 
+ * // auxCond receives the value
+ * // of the previous condition
+ * // this way we can know if the
+ * // previous condition was false or true
+ * else {
+ *     print("false")
+ * }
+ */
+let auxCond;
+
+/**
+ * a string containing the file content
+ */
 let line = file.match(regex.functions.print);
 
-// a bug solve
+/*
+  add a line break at the 
+  end of the file to solve a problem
+ */
 line.input += "\\n";
 
-// separating lines
+// separating file lines
 line = line.input.split("\n");
 
 // line index
@@ -236,8 +365,11 @@ let index = 0;
 
 main(line, index);
 
-// until the file ends
-function main(line, index, ignore=null) {
+/**
+ * this function runs the entire program,
+it is inside a function to be reused in code blocks
+ */
+function main(line, index) { // ====================================== main ========================================
     while (line[index] !== undefined) {
         let funcLine = line[index].match(regex.functions.getFunc);
         let keyword = line[index].match(regex.keywords.getKeyWord);
@@ -319,6 +451,12 @@ function main(line, index, ignore=null) {
             // gets the condition
             let cond = regex.identifiers.condition.exec(line[index]);
 
+            if (cond[1][0] === "$") {
+                let varName = regex.keywords.varIn.exec(cond[1]);
+
+                cond[1] = getVar(varName[1]).value;
+            }
+
             // true || false
             let retn = new Condition(cond[1]);
     
@@ -330,43 +468,36 @@ function main(line, index, ignore=null) {
             
             // detect the code block
             if (retn.return && line[index][line[index].length - 2] === "{") {
+                auxCond = true;
                 index++ // new line
                 let auxIndex = 0;
-                let blockLine;
-                let block = [];
-
-                // get all lines inside the block
-                blockLine = line.filter((v, i) => {
-                    if (i >= index && v !== "}") {
-                        return true;
-                    }
-
-                    else {
-                        return false;
-                    }
-                });
-
-                // remove indentation
-                blockLine.forEach(v => {
-                    block.push(v.trimStart());
-                })
+                let block = getBlock(line, index);
 
                 // executes the same function  main() running now, but for the code block
-                auxIndex = main(block, auxIndex, "if");
+                auxIndex = main(block, auxIndex);
 
                 index = auxIndex + index;
             }
 
             else {
-                for (let i = index; i < line.length; i++) {
-                    if (line[i][0] === "}") {
-                        break;
-                    }
+                index = ignoreBlock(index, line);
+            }
+        }
 
-                    else {
-                        index++
-                    }
-                }
+        else if (((keyword !== null) ? keyword[0] : "") === "else") {
+            if (line[index][line[index].length - 2] === "{" && !auxCond) {
+                index++; //new line
+                let block = getBlock(line, index);
+                let auxIndex = 0;
+
+                auxIndex = main(block, auxIndex);
+
+                index = auxIndex + index;
+                auxCond = undefined;
+            }
+
+            else {
+                index = ignoreBlock(index, line);
             }
         }
         
@@ -390,6 +521,13 @@ function main(line, index, ignore=null) {
 
             exec(aux);
         }
+
+        /*else if(regex.functions.getFunc.test(funcLine) && funcLine[1] === "ip") {
+            let args = regex.functions.getFull.exec(funcLine);
+            args = regex.functions.getArgs.exec(args);
+
+            console.log(args);
+        }*/
     
         // next line
         index++;

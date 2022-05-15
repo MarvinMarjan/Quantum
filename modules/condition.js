@@ -5,6 +5,12 @@ class Condition {
         this.return = this.solveCondition(exp)
     }
 
+    /**
+     * resolves a condition and returns true or false
+     * 
+     * @param {*} exp a condition expression
+     * @returns true or false
+     */
     solveCondition(exp) {
         function checkCondition() {
             let aux = [];
@@ -172,18 +178,18 @@ class Condition {
         }
 
         let aux = exp.split(" ");
+
+        if (aux[0] === "true") {
+            return [true];
+        }
+
+        else if (aux[0] === "false") {
+            return [false];
+        }
+
         let type;
         let conditions = [];
         let auxArray = []
-
-        let operations = [
-            "equality",
-            "opposition",
-            "bigger-than",
-            "smaller-than",
-            "bigger-or-equal-to",
-            "smaller-or-equal-to"
-        ]
 
         aux.forEach((v, i) => {
             if (v !== "==" && v !== "!=" && v !== ">" && v !== "<" && v !== ">=" && v !== "<=" && v !== "and" && v !== "or") {
