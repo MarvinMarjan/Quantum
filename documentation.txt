@@ -46,4 +46,31 @@ keywords {
             5
         }
     }
+
+    if: conditional structure {
+        syntax {
+            if (condition == true) {
+                code
+            }
+        }
+
+        example {
+            if (2 == 2) {
+                print("equals 2")
+            }
+        }
+
+        operators {
+            == 
+            !=
+            >
+            <
+            >=
+            <=
+        }
+
+        console {
+            equals 2
+        }
+    }
 }

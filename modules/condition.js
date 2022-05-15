@@ -187,6 +187,7 @@ class Condition {
 
         aux.forEach((v, i) => {
             if (v !== "==" && v !== "!=" && v !== ">" && v !== "<" && v !== ">=" && v !== "<=" && v !== "and" && v !== "or") {
+
                 type = getType(["", "", "", v]);
 
                 let temp;
@@ -206,6 +207,7 @@ class Condition {
 
                     case "float":
                         temp = v;
+                        break;
                 }
 
                 auxArray.push(temp);

@@ -5,7 +5,7 @@ class NumExp {
 
     solveExp(exp="") {
         let regex = {
-            getOrder: /\((.+)\)/m,
+            getOrder: /\[(.+)\]/m,
             getMath: /(\d+)?\s?(\+|-|\*|\/)\s?(\d+)/gm
         }
 
