@@ -3,6 +3,7 @@ import Terminal from "./modules/terminal.js";
 import Var from "./modules/var.js";
 import NumExp from "./modules/numexp.js"
 import Condition from "./modules/condition.js";
+import Ip from "./modules/ip.js"
 
 // Functions
 import getCommand from "./cli.js";
@@ -11,11 +12,6 @@ import error from "./modules/err.js";
 // node js
 import fs from "fs";
 import { exec } from "child_process";
-import os from "os"
-
-/*let test = os.networkInterfaces();
-
-console.log(test);*/
 
 // terminal class instantiation
 const terminal = new Terminal("Terminal");
@@ -255,6 +251,21 @@ function concatArgs(funcLine) {
     return string;
 }
 
+function findFuncArg(funcLine) {
+    let args = regex.functions.getFull.exec(funcLine);
+    args = args[0].match(regex.functions.getArgs);
+
+    args = args[0].substring(1, args[0].length - 2);
+
+    if (regex.functions.getFunc) {
+        return true;
+    }
+
+    else {
+        return false;
+    }
+}
+
 /**
  * ignore a block of code
  * 
@@ -282,10 +293,10 @@ function ignoreBlock(index, line) {
 const regex = {
     // function regexs
     functions: {
-        getFunc: /(\w+)\(/m,
+        getFunc: /(\w+)\(.*\)/m,
 
         // get all args
-        getArgs: /(?:"(.*?)")?(\.?\d+\.?)?(\$\w+\.?\w+)?(true|false)?(<(.*?)>)?(\((.+?)\))?/gm,
+        getArgs: /(?:"(.*?)")?(\.?\d+\.?)?(\$\w+\.?\w+)?(true|false)?(<(.*?)>)?(\((.+)\))?/gm,
 
         // get everything between parenthesis
         getFull: /\((.*)\)/m
@@ -345,6 +356,28 @@ let vars = {};
  * }
  */
 let auxCond;
+
+/**
+ * an object containing all functions that return some value
+ */
+let returnFuncs = {
+    /**
+     * ip manipulation
+     */
+    ip: {
+        /**
+         * @param {*} type ip type to return
+         * @returns ip
+         */
+        get: function(type) {
+            let ip = new Ip(type);
+
+            return ip.return;
+        },
+
+        args: 1
+    }
+}
 
 /**
  * a string containing the file content
@@ -432,10 +465,42 @@ function main(line, index) { // ====================================== main ====
                     varLine[3] = String(numExp.result); // varLine[3] is the var value index
                 }
 
-                else if (regex.identifiers.condition.test(varLine.input)) {
+                // ======================== 
+                else if (regex.functions.getFunc.test(varLine.input)) {
+                    let funcName = regex.functions.getFunc.exec(varLine.input);
+                    let args = regex.functions.getFull.exec(funcName[0]);
+
+                    if (funcName[1] === "ip") {
+                        let maxArgs = 1;
+                        let strArg = "";
+                        args = args[1].match(regex.functions.getArgs);
+
+                        args = args.filter(v => {
+                            if (v != false) {
+                                return true;
+                            }
+
+                            else {
+                                return false;
+                            }
+                        })
+
+                        args.forEach((v, i) => {
+                            if (i <= maxArgs - 1) {
+                                strArg += v;
+                            }
+                        });
+
+                        strArg = qtRemove(strArg);
+
+                        varLine[3] = returnFuncs.ip.get(strArg);
+                    }
+                }
+
+                else if (regex.identifiers.condition.test(varLine.input) ) {
                     varLine = condRetn(varLine.input, varLine);
                 }
-    
+
                 let type = getType(varLine[3]);
     
                 // new var
@@ -503,12 +568,19 @@ function main(line, index) { // ====================================== main ====
         
         // detect if the function is "print"
         if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "print") {
-            
+            /*let funcName = regex.functions.getFunc.exec(funcLine);
+            let full = regex.functions.getFull.exec(funcLine);
+            let args = full[1].match(regex.functions.getArgs);
+
+            if (findFuncArg(funcLine)) {
+
+            }*/
+
             let string = concatArgs(funcLine);
     
-            let args = string;
+            let aux = string;
     
-            terminal.print(args);
+            terminal.print(aux);
         }
     
         // detect if the function is "clear"
