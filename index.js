@@ -4,6 +4,7 @@ import Var from "./modules/var.js";
 import NumExp from "./modules/numexp.js"
 import Condition from "./modules/condition.js";
 import Ip from "./modules/ip.js"
+import File from "./modules/file.js"
 
 // Functions
 import getCommand from "./cli.js";
@@ -174,43 +175,40 @@ function condRetn(line, array) {
  * @param {*} funcLine a line containing a function
  * @returns all function arguments concatenated
  */
-function concatArgs(funcLine) {
-    let args = funcLine.input.match(regex.functions.getFull);
-    args = args[1];
-    args = args.match(regex.functions.getArgs);
-
-    let varName;
+function formatArgs(funcLine, mode="concat") {
     let string = "";
+    let varName;
 
     // detect a numeric expression
-    args.forEach((v, i) => {
+    funcLine.forEach((v, i) => {
         if (regex.identifiers.numExp.test(v)) {
             let aux = regex.identifiers.numExp.exec(v);
             let result = new NumExp(aux[1]);
 
-            args[i] = String(result.result);
+            funcLine[i] = String(result.result);
         }
 
         if(regex.identifiers.condition.test(v)) {
             let aux = regex.identifiers.condition.exec(v);
             let result = new Condition(aux[1]);
 
-            args[i] = String(result.return);
+            funcLine[i] = String(result.return);
         }
     });
+
     
-    for (let i = 0; i < args.length; i++) {
+    for (let i = 0; i < funcLine.length; i++) {
         varName = undefined;
 
-        if (args[i] == false) {
-            args.splice(i, 0);
+        if (funcLine[i] == false) {
+            funcLine.splice(i, 0);
             continue;
         }
 
         // the argument is a variable
-        if (args[i].indexOf("$") === 0) {
-            if (regex.keywords.varProp.test(args[i]) && args[i].indexOf(".") !== -1) {
-                let prop = args[i].match(regex.keywords.varProp);
+        if (funcLine[i].indexOf("$") === 0) {
+            if (regex.keywords.varProp.test(funcLine[i]) && funcLine[i].indexOf(".") !== -1) {
+                let prop = funcLine[i].match(regex.keywords.varProp);
 
                 prop.forEach((v, i) => {
                     if (v == false) {
@@ -227,13 +225,20 @@ function concatArgs(funcLine) {
             }
 
             else {
-                varName = args[i].substring(1);
+                varName = funcLine[i].substring(1);
             }
         }
 
         if (varName) {
             try {
-                string += qtRemove(getVar(varName).value);
+                if (mode === "concat") {
+                    string += qtRemove(getVar(varName).value);
+                }
+
+                else if (mode === "format") {
+                    funcLine[i] = qtRemove(getVar(varName).value);
+                }
+
                 varName = null;
             }
 
@@ -244,26 +249,71 @@ function concatArgs(funcLine) {
             }
         }
 
-        string += (varName) ? "" : (varName !== undefined) ? "" : qtRemove(args[i]);
-        
-    }
+        string += (varName) ? "" : (varName !== undefined) ? "" : qtRemove(funcLine[i]);
 
-    return string;
+        if (mode === "concat") {
+            string = escapeChar(string);
+            return string;
+        }
+
+        else if(mode === "format") {
+            let retr = funcLine.map(escapeChar)
+
+            return retr;
+        }
+    }
 }
 
-function findFuncArg(funcLine) {
-    let args = regex.functions.getFull.exec(funcLine);
-    args = args[0].match(regex.functions.getArgs);
 
-    args = args[0].substring(1, args[0].length - 2);
+function escapeChar(str) {
+    let ret = str
+    let char = "";
 
-    if (regex.functions.getFunc) {
-        return true;
+    for (let i = 0; i < ret.length; i++) {
+        if (ret[i] === "\\") {
+            if (ret[i + 1] === "n") {
+                char = ret.replace("\\n", "\n");
+            }
+        }
+    }
+
+    if (char == false) {
+        return ret;
     }
 
     else {
-        return false;
+        return char;
     }
+}
+
+/**
+ * returns an array of objects containing functions that were found in the parameters of the parent function
+ * 
+ * @param {*} arg an array containing all the arguments of the function
+ * @returns an array of objects
+ */
+function findFuncArg(arg) {
+    let indexes = [];
+
+    arg.forEach((v, i) => {
+        if (regex.functions.getFunc.test(v)) {
+            if (v[0] === "(") {
+                indexes.push({
+                    func: v.substring(1, v.length - 1),
+                    index: i
+                });
+            }
+
+            else {
+                indexes.push({
+                    func: v,
+                    index: i
+                });
+            }
+        }
+    });
+
+    return indexes;
 }
 
 /**
@@ -287,6 +337,18 @@ function ignoreBlock(index, line) {
     return index;
 }
 
+function removeNull(array) {
+    return array.filter(v => {
+        if (v != false) {
+            return true;
+        }
+
+        else {
+            return false;
+        }
+    });
+}
+
 /**
  * an object containing all the regexs used in the code
  */
@@ -296,7 +358,7 @@ const regex = {
         getFunc: /(\w+)\(.*\)/m,
 
         // get all args
-        getArgs: /(?:"(.*?)")?(\.?\d+\.?)?(\$\w+\.?\w+)?(true|false)?(<(.*?)>)?(\((.+)\))?/gm,
+        getArgs: /(?:"(.*?)")?(\.?\d+\.?)?(\$\w+\.?\w+)?(true|false)?(<(.*?)>)?(\w+\(.+?\))?/gm,
 
         // get everything between parenthesis
         getFull: /\((.*)\)/m
@@ -376,6 +438,39 @@ let returnFuncs = {
         },
 
         args: 1
+    },
+
+    /**
+     * file manipulation
+     */
+    file: {
+        /**
+         * reads a file and returns its contents
+         * 
+         * @param {*} path the path to the file
+         * @returns file content
+         */
+        read: function(path) {
+            let file = new File("read", path);
+
+            return file.return;
+        },
+
+        /**
+         * write or create a file
+         * 
+         * @param {*} path the path to the file
+         * @param {*} data the content to be written to the file
+         * @returns true if no error has occurred
+         */
+        write: function(path, data) {
+            let file = new File("write", path, data);
+
+            return file.return;
+        },
+
+        rArgs: 2,
+        wArgs: 3
     }
 }
 
@@ -475,15 +570,7 @@ function main(line, index) { // ====================================== main ====
                         let strArg = "";
                         args = args[1].match(regex.functions.getArgs);
 
-                        args = args.filter(v => {
-                            if (v != false) {
-                                return true;
-                            }
-
-                            else {
-                                return false;
-                            }
-                        })
+                        args = removeNull(args);
 
                         args.forEach((v, i) => {
                             if (i <= maxArgs - 1) {
@@ -494,6 +581,23 @@ function main(line, index) { // ====================================== main ====
                         strArg = qtRemove(strArg);
 
                         varLine[3] = returnFuncs.ip.get(strArg);
+                    }
+
+                    else if (funcName[1] === "file") {
+                        args = args[1].match(regex.functions.getArgs);
+                        let qtRmdArgs = args.map(qtRemove);
+
+                        let concat = formatArgs(args);
+
+                        qtRmdArgs = removeNull(qtRmdArgs)
+
+                        if (qtRmdArgs[0] === "read") {
+                            varLine[3] = returnFuncs.file.read(qtRmdArgs[1]);
+                        }
+
+                        else if (qtRmdArgs[0] === "write") {
+                            varLine[3] = returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
+                        }
                     }
                 }
 
@@ -508,6 +612,7 @@ function main(line, index) { // ====================================== main ====
     
                 //save var
                 vars[varObj.name] = varObj;
+                index++;
             }
         }
         
@@ -568,15 +673,31 @@ function main(line, index) { // ====================================== main ====
         
         // detect if the function is "print"
         if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "print") {
-            /*let funcName = regex.functions.getFunc.exec(funcLine);
+            let funcName = regex.functions.getFunc.exec(funcLine);
             let full = regex.functions.getFull.exec(funcLine);
             let args = full[1].match(regex.functions.getArgs);
 
-            if (findFuncArg(funcLine)) {
+            if (findFuncArg(args) != false) {
+                let indexes = findFuncArg(args);
+    
+                indexes.forEach((v, i) => {
+                    let auxName = regex.functions.getFunc.exec(v.func);
+                    let auxArgs = regex.functions.getFull.exec(v.func);
+                    auxArgs = auxArgs[1].match(regex.functions.getArgs);
+    
+                    if (auxName[1] === "ip") {
+                        let total = "";
+    
+                        for (let o = 0; o < returnFuncs.ip.args; o++) {
+                            total += qtRemove(auxArgs[o]);
+                        }
+    
+                        args[i] = returnFuncs.ip.get(total);
+                    }
+                })
+            }
 
-            }*/
-
-            let string = concatArgs(funcLine);
+            let string = formatArgs(args);
     
             let aux = string;
     
@@ -588,18 +709,26 @@ function main(line, index) { // ====================================== main ====
             terminal.clear();
         }
     
-        else if(regex.functions.getFunc.test(funcLine) && funcLine[1] === "exec") {
-            let aux = concatArgs(funcLine)//.input.match(regex.functions.getFull);
+        else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "exec") {
+            let aux = regex.functions.getFull.exec(funcLine[0]);
+            aux = formatArgs(aux[1].match(regex.functions.getArgs))//.input.match(regex.functions.getFull);
 
             exec(aux);
         }
 
-        /*else if(regex.functions.getFunc.test(funcLine) && funcLine[1] === "ip") {
-            let args = regex.functions.getFull.exec(funcLine);
-            args = regex.functions.getArgs.exec(args);
+        else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "file") {
+            let args = regex.functions.getFull.exec(funcLine[0]);
+            args = args[1].match(regex.functions.getArgs);
 
-            console.log(args);
-        }*/
+            let qtRmdArgs = args.map(qtRemove);
+
+            qtRmdArgs = removeNull(qtRmdArgs);
+
+            if (qtRmdArgs[0] === "write") {
+                qtRmdArgs[2] = formatArgs([qtRmdArgs[2]], "format")[0]
+                returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
+            }
+        }
     
         // next line
         index++;

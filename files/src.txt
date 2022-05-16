@@ -1,1 +1,6 @@
-print("hello, world")
+var str = "helloooo,w \nrodlasd"
+
+file("write", "file.txt", $str)
+var file = file("read", "file.txt")
+
+print($file)
