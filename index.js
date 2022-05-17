@@ -285,6 +285,14 @@ function escapeChar(str) {
             if (ret[i + 1] === "n") {
                 char = ret.replace("\\n", "\n");
             }
+
+            else if (ret[i + 1] === "t") {
+                char = ret.replace("\\t", "\t");
+            }
+
+            else if (ret[i + 1] === "\\") {
+                char = ret.replace("\\", "\\");
+            }
         }
     }
 

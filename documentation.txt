@@ -119,6 +119,19 @@ keywords {
             print($num) // 10
         }
 
+        parameter vars {
+            -->> qtm /d apple banana
+
+            /d means that the file to be interpreted will be the default (files/src.txt)
+
+            apple: %1 (parameter 1)
+            banana: %2 (parameter 2)
+
+            var param = %1 // "apple"
+
+            print($param)
+        }
+
         console {
             5
         }
