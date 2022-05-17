@@ -1,3 +1,5 @@
-var param = %1
+var num = <2 * 5>
 
-print($param)
+if ($num == 10) {
+    print("o valor de ", $num.name, " é ", $num)
+}

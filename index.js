@@ -682,7 +682,7 @@ function main(line, index) { // ====================================== main ====
             retn.return = retn.return[0];
             
             // detect the code block
-            if (retn.return && line[index][line[index].length - 2] === "{") {
+            if (retn.return && line[index][line[index].length - 1] === "{") {
                 auxCond = true;
                 index++ // new line
                 let auxIndex = 0;
@@ -722,8 +722,12 @@ function main(line, index) { // ====================================== main ====
             let full = regex.functions.getFull.exec(funcLine);
             let args = full[1].match(regex.functions.getArgs);
 
+            let isFunc = false;
+
             if (findFuncArg(args) != false) {
                 let indexes = findFuncArg(args);
+
+                isFunc = true;
     
                 indexes.forEach((v, i) => {
                     let auxName = regex.functions.getFunc.exec(v.func);
@@ -759,7 +763,7 @@ function main(line, index) { // ====================================== main ====
                 })
             }
 
-            let string = formatArgs(args, "concat", true);
+            let string = formatArgs(args, "concat", (isFunc) ? true : false);
     
             let aux = string;
     
