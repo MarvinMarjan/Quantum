@@ -3,6 +3,12 @@ class NumExp {
         this.result = this.solveExp(exp);
     }
 
+    /**
+     * solve a numeric expression and return a result
+     * 
+     * @param {*} exp expression to solve
+     * @returns result
+     */
     solveExp(exp="") {
         let regex = {
             getOrder: /\[(.+)\]/m,

@@ -5,10 +5,18 @@ class Var {
         this.value = value;
 
         this.prop = {
-            type: this.type
+            type: this.type,
+            name: this.name
         };
     }
 
+    /**
+     * return a var property
+     * 
+     * @param {*} prop 
+     * @param {*} targProp 
+     * @returns 
+     */
     static getProp(prop, targProp) {
         function through(obj) {
             for (let v in obj) {

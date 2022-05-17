@@ -1,3 +1,7 @@
+/**
+ * @copyright all rights reserved
+ */
+
 // Classes
 import Terminal from "./modules/terminal.js";
 import Var from "./modules/var.js";
@@ -175,20 +179,22 @@ function condRetn(line, array) {
  * @param {*} funcLine a line containing a function
  * @returns all function arguments concatenated
  */
-function formatArgs(funcLine, mode="concat") {
+function formatArgs(funcLine, mode="concat", ignore=false) {
     let string = "";
     let varName;
 
+    funcLine = funcLine.map(String);
+
     // detect a numeric expression
     funcLine.forEach((v, i) => {
-        if (regex.identifiers.numExp.test(v)) {
+        if (regex.identifiers.numExp.test(v) && !ignore) {
             let aux = regex.identifiers.numExp.exec(v);
             let result = new NumExp(aux[1]);
 
             funcLine[i] = String(result.result);
         }
 
-        if(regex.identifiers.condition.test(v)) {
+        if(regex.identifiers.condition.test(v) && !ignore) {
             let aux = regex.identifiers.condition.exec(v);
             let result = new Condition(aux[1]);
 
@@ -249,22 +255,27 @@ function formatArgs(funcLine, mode="concat") {
             }
         }
 
-        string += (varName) ? "" : (varName !== undefined) ? "" : qtRemove(funcLine[i]);
+        string += (varName) ? "" : (varName !== undefined) ? "" : (!ignore) ? qtRemove(funcLine[i]) : funcLine[i];
+    }
 
-        if (mode === "concat") {
-            string = escapeChar(string);
-            return string;
-        }
+    if (mode === "concat") {
+        string = (!ignore) ? escapeChar(string) : string;
+        return string;
+    }
 
-        else if(mode === "format") {
-            let retr = funcLine.map(escapeChar)
+    else if(mode === "format") {
+        let retr = funcLine.map(escapeChar)
 
-            return retr;
-        }
+        return retr;
     }
 }
 
-
+/**
+ * looks for escape characters in a string and returns the string formatted according to the escape characters
+ * 
+ * @param {*} str string to search
+ * @returns formated string
+ */
 function escapeChar(str) {
     let ret = str
     let char = "";
@@ -337,6 +348,12 @@ function ignoreBlock(index, line) {
     return index;
 }
 
+/**
+ * remove all blank items from an array
+ * 
+ * @param {*} array array items to remove
+ * @returns array with blank items removed
+ */
 function removeNull(array) {
     return array.filter(v => {
         if (v != false) {
@@ -347,6 +364,98 @@ function removeNull(array) {
             return false;
         }
     });
+}
+
+/**
+ * handling assignment and reassignment of variables
+ * 
+ * @param {*} varLine the line containing the assignment or reassignment of a variable
+ */
+function varATB(varLine) {
+    if (regex.identifiers.numExp.test(varLine.input)) {
+        let exp = varLine.input.match(regex.identifiers.numExp)
+        
+        if (regex.keywords.varIn.test(varLine.input)) {
+            let varExp = varLine.input.match(regex.keywords.varIn);
+            let aux = regex.identifiers.numExp.exec(varLine[3]);
+            let rplcExp = aux[1];
+
+            for (let i = 0; i < varExp.length; i++) {
+                varExp.forEach((v, i) => {
+                    let auxVar = getVar(varExp[i].substring(1));
+                    let tempRegex = new RegExp("\\" + v, "g");
+
+                    rplcExp = rplcExp.replace(tempRegex, auxVar.value);
+                });
+
+                exp[1] = `${rplcExp}`
+            }
+        }
+
+        let numExp = new NumExp(exp[1]);
+
+        varLine[3] = String(numExp.result); // varLine[3] is the var value index
+    }
+
+    // ======================== 
+    else if (regex.functions.getFunc.test(varLine.input)) {
+        let funcName = regex.functions.getFunc.exec(varLine.input);
+        let args = regex.functions.getFull.exec(funcName[0]);
+
+        if (funcName[1] === "ip") {
+            let maxArgs = 1;
+            let strArg = "";
+            args = args[1].match(regex.functions.getArgs);
+
+            args = removeNull(args);
+
+            args.forEach((v, i) => {
+                if (i <= maxArgs - 1) {
+                    strArg += v;
+                }
+            });
+
+            strArg = qtRemove(strArg);
+
+            varLine[3] = returnFuncs.ip.get(strArg);
+        }
+
+        else if (funcName[1] === "file") {
+            args = args[1].match(regex.functions.getArgs);
+            let qtRmdArgs = args.map(qtRemove);
+
+            let concat = formatArgs(args);
+
+            qtRmdArgs = removeNull(qtRmdArgs)
+
+            if (qtRmdArgs[0] === "read") {
+                varLine[3] = returnFuncs.file.read(qtRmdArgs[1]);
+            }
+
+            else if (qtRmdArgs[0] === "write") {
+                varLine[3] = returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
+            }
+        }
+    }
+
+    else if (regex.identifiers.condition.test(varLine.input) ) {
+        varLine = condRetn(varLine.input, varLine);
+    }
+
+    else if (regex.identifiers.sysArg.test(varLine.input)) {
+        let arg = regex.identifiers.sysArg.exec(varLine.input);
+
+        varLine[3] = process.argv[Number(arg[1]) + 2];
+    }
+
+    let type = getType(varLine[3]);
+
+    // new var
+    let varObj = new Var(varLine[1], type, varLine[3])
+
+    //save var
+    vars[varObj.name] = varObj;
+    index++;
 }
 
 /**
@@ -367,7 +476,8 @@ const regex = {
     identifiers: {
         // get a numExpression
         numExp: /<(.*?)>/m,
-        condition: /\((.+)\)/m
+        condition: /\((.+)\)/m,
+        sysArg: /%(\d+)/m
     },
 
     // keywords regexs
@@ -384,7 +494,7 @@ const regex = {
         varProp: /(\w+)?/gm,
 
         // contains var
-        varIn: /\$(\w+)/gm,
+        varIn: /\$(\w+)/m,
     }
 }
 
@@ -535,84 +645,7 @@ function main(line, index) { // ====================================== main ====
             varLine = regex.keywords.var.exec(varLine);
     
             if (varLine[2] === "=") {
-                if (regex.identifiers.numExp.test(varLine.input)) {
-                    let exp = varLine.input.match(regex.identifiers.numExp)
-                    
-                    if (regex.keywords.varIn.test(varLine.input)) {
-                        let varExp = varLine.input.match(regex.keywords.varIn);
-                        let aux = regex.identifiers.numExp.exec(varLine[3]);
-                        let rplcExp = aux[1];
-    
-                        for (let i = 0; i < varExp.length; i++) {
-                            varExp.forEach((v, i) => {
-                                let auxVar = getVar(varExp[i].substring(1));
-                                let tempRegex = new RegExp("\\" + v, "g");
-    
-                                rplcExp = rplcExp.replace(tempRegex, auxVar.value);
-                            });
-    
-                            exp[1] = `${rplcExp}`
-                        }
-                    }
-    
-                    let numExp = new NumExp(exp[1]);
-    
-                    varLine[3] = String(numExp.result); // varLine[3] is the var value index
-                }
-
-                // ======================== 
-                else if (regex.functions.getFunc.test(varLine.input)) {
-                    let funcName = regex.functions.getFunc.exec(varLine.input);
-                    let args = regex.functions.getFull.exec(funcName[0]);
-
-                    if (funcName[1] === "ip") {
-                        let maxArgs = 1;
-                        let strArg = "";
-                        args = args[1].match(regex.functions.getArgs);
-
-                        args = removeNull(args);
-
-                        args.forEach((v, i) => {
-                            if (i <= maxArgs - 1) {
-                                strArg += v;
-                            }
-                        });
-
-                        strArg = qtRemove(strArg);
-
-                        varLine[3] = returnFuncs.ip.get(strArg);
-                    }
-
-                    else if (funcName[1] === "file") {
-                        args = args[1].match(regex.functions.getArgs);
-                        let qtRmdArgs = args.map(qtRemove);
-
-                        let concat = formatArgs(args);
-
-                        qtRmdArgs = removeNull(qtRmdArgs)
-
-                        if (qtRmdArgs[0] === "read") {
-                            varLine[3] = returnFuncs.file.read(qtRmdArgs[1]);
-                        }
-
-                        else if (qtRmdArgs[0] === "write") {
-                            varLine[3] = returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
-                        }
-                    }
-                }
-
-                else if (regex.identifiers.condition.test(varLine.input) ) {
-                    varLine = condRetn(varLine.input, varLine);
-                }
-
-                let type = getType(varLine[3]);
-    
-                // new var
-                let varObj = new Var(varLine[1], type, varLine[3])
-    
-                //save var
-                vars[varObj.name] = varObj;
-                index++;
+                varATB(varLine);
             }
         }
         
@@ -621,14 +654,18 @@ function main(line, index) { // ====================================== main ====
             // gets the condition
             let cond = regex.identifiers.condition.exec(line[index]);
 
-            if (cond[1][0] === "$") {
-                let varName = regex.keywords.varIn.exec(cond[1]);
+            cond = cond[1].split(" ");    
 
-                cond[1] = getVar(varName[1]).value;
-            }
+            cond.forEach((v, i) => {
+                if (regex.keywords.varIn.test(v)) {
+                    let varName = regex.keywords.varIn.exec(v);
+
+                    cond[i] = getVar(varName[1]).value;
+                }
+            });
 
             // true || false
-            let retn = new Condition(cond[1]);
+            let retn = new Condition(cond.join(" "));
     
             while (typeof retn.return[0] === "object") {
                 retn.return = [...retn.return[0]];
@@ -694,10 +731,27 @@ function main(line, index) { // ====================================== main ====
     
                         args[i] = returnFuncs.ip.get(total);
                     }
+
+                    else if (auxName[1] === "file") {
+                        let auxArgs = regex.functions.getFull.exec(auxName[0]);
+                        auxArgs = auxArgs[1].match(regex.functions.getArgs);
+
+                        let qtRmdArgs = removeNull(auxArgs.map(qtRemove));
+
+                        if (qtRmdArgs[0] === "write") {
+                            qtRmdArgs[2] = formatArgs([qtRmdArgs[2]], "format", true)[0]
+                            args[i] = returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
+                        }
+
+                        else if(qtRmdArgs[0] === "read") {
+                            qtRmdArgs[1] = formatArgs([qtRmdArgs[1]], "format", true)[0]
+                            args[i] = returnFuncs.file.read(qtRmdArgs[1]);
+                        }
+                    }
                 })
             }
 
-            let string = formatArgs(args);
+            let string = formatArgs(args, "concat", true);
     
             let aux = string;
     
@@ -725,7 +779,7 @@ function main(line, index) { // ====================================== main ====
             qtRmdArgs = removeNull(qtRmdArgs);
 
             if (qtRmdArgs[0] === "write") {
-                qtRmdArgs[2] = formatArgs([qtRmdArgs[2]], "format")[0]
+                qtRmdArgs[2] = formatArgs([qtRmdArgs[2]], "format", true)[0]
                 returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
             }
         }

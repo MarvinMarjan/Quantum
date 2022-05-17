@@ -1,1 +1,1 @@
-start cmd /k node "C:\Users\Usuario\Documents\program\Javascript\Back-End\Quantum\index.js" %1
+start cmd /k node "C:\Users\Usuario\Documents\program\Javascript\Back-End\Quantum\index.js" %*

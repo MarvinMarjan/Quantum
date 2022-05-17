@@ -1,12 +1,21 @@
 import os from "os"
 
+/**
+ * class for ip handling
+ */
 class Ip {
+    /**
+     * @param {*} type ip type
+     */
     constructor(type) {
         if (type === "ipv4") {
             this.return = this.ipv4();
         }
     }
 
+    /**
+     * @returns the ipv4 
+     */
     ipv4() {
         let ip = os.networkInterfaces();
 

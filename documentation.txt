@@ -1,3 +1,5 @@
+a variable with ? in the end it means it is not mandatory
+
 functions {
     print: print a value in the console {
         syntax {
@@ -16,6 +18,48 @@ functions {
     clear: clear the console {
         syntax {
             clear()
+        }
+    }
+
+    ip: ip handling {
+        syntax {
+            ip(ip_type)
+        }
+
+        exmaple {
+            var ip = ip("ipv4")
+
+            print($ip)
+        }
+
+        console {
+            ip*
+        }
+    }
+
+    file: file manipulation {
+        syntax {
+            file(mode, path, data?)
+        }
+
+        write {
+            assigning {
+                var fl = file("write", path, initial_data) // returns true if no errors occurred
+
+                print($fl) // true or false
+            }
+
+            normal {
+                file("write", path, initial_data)
+            }
+        }
+
+        read {
+            assigning {
+                var fl = file("read", path) // return the file content
+
+                print($fl)
+            }
         }
     }
 }
@@ -40,6 +84,39 @@ keywords {
             $num = 5
 
             print($num)
+        }
+
+        print var type {
+            var str = "hello, world"
+            var num = 19
+
+            print($Num.type, " ", $str.type)
+
+            console {
+                number string
+            }
+        }
+
+        print var name {
+            var num = 10
+
+            print($num.name)
+
+            console {
+                num
+            }
+        }
+
+        conditions {
+            var cond = (3 == 3)
+
+            print($cond) // true
+        }
+
+        numeric expressions {
+            var num = <3 * 2 + (2 + 2)>
+
+            print($num) // 10
         }
 
         console {
@@ -71,6 +148,32 @@ keywords {
 
         console {
             equals 2
+        }
+    }
+
+    else: executes a code block if the previous condition is false {
+        syntax {
+            if (condition) {
+                block
+            }
+
+            else {
+                block
+            }
+        }
+
+        example {
+            if (3 != 3) {
+                print("not equals")
+            }
+
+            else {
+                print("false")
+            }
+        }
+
+        console {
+            false
         }
     }
 }

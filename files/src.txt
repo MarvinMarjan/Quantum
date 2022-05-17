@@ -1,6 +1,3 @@
-var str = "helloooo,w \nrodlasd"
+var num = 10
 
-file("write", "file.txt", $str)
-var file = file("read", "file.txt")
-
-print($file)
+print($num.name)

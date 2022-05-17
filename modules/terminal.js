@@ -1,12 +1,16 @@
 import error from "./err.js";
 
-// console (Terminal) class
+/**
+ * console (Terminal) class
+ */ 
 class Terminal {
     constructor(name) {
         this.name = "Terminal";
     }
 
-    // logs in the console a string
+    /**
+     * logs in the console a string
+     */
     print() {
         try {
             let string = "";
@@ -24,6 +28,9 @@ class Terminal {
         }
     }
 
+    /**
+     * clear the console
+     */
     clear() {
         console.clear()
     }
