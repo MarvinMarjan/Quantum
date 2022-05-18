@@ -44,7 +44,7 @@ async function getFile(argv) {
 function qtRemove(str) {
     let string = "";
 
-    for (let o = (str.indexOf("\"") === -1 ) ? 0 : 1; o < str.length - ((str.indexOf("\"") === -1) ? 0 : 1); o++) {
+    for (let o = (str[0] === "\"") ? 1 : 0; o < str.length - ((str[str.length - 1] === "\"") ? 1 : 0); o++) {
         if (str.indexOf("\"") === -1) {
             string += str[o];
         }
@@ -154,6 +154,14 @@ function getBlock(line, index) {
     return block;
 }
 
+function formatCondReturn(retn) {
+    while (typeof retn.return[0] === "object") {
+        retn.return = [...retn.return[0]];
+    }
+
+    return retn.return = retn.return[0];
+}
+
 /**
  * this function is used in the assignment of a variable, 
  * if there is a condition in the value of the variable this 
@@ -196,7 +204,7 @@ function formatArgs(funcLine, mode="concat", ignore=false) {
 
         if(regex.identifiers.condition.test(v) && !ignore) {
             let aux = regex.identifiers.condition.exec(v);
-            let result = new Condition(aux[1]);
+            let result = new Condition(aux[2]);
 
             funcLine[i] = String(result.return);
         }
@@ -430,11 +438,11 @@ function varATB(varLine) {
 
         else if (funcName[1] === "file") {
             args = args[1].match(regex.functions.getArgs);
-            let qtRmdArgs = args.map(qtRemove);
+            let concat = formatArgs(args, "format");
 
-            let concat = formatArgs(args);
+            let qtRmdArgs = concat.map(qtRemove);
 
-            qtRmdArgs = removeNull(qtRmdArgs)
+            qtRmdArgs = removeNull(qtRmdArgs);
 
             if (qtRmdArgs[0] === "read") {
                 varLine[3] = returnFuncs.file.read(qtRmdArgs[1]);
@@ -475,7 +483,7 @@ const regex = {
         getFunc: /(\w+)\(.*\)/m,
 
         // get all args
-        getArgs: /(?:"(.*?)")?(\.?\d+\.?)?(\$\w+\.?\w+)?(true|false)?(<(.*?)>)?(\w+\(.+?\))?/gm,
+        getArgs: /(?:"(.*?)")?(\.?\d+\.?)?(\$\w+\.?\w+)?(true|false)?(<(.*?)>)?(\w+\(.+?\))?(\|(.+?)\|)?/gm,
 
         // get everything between parenthesis
         getFull: /\((.*)\)/m
@@ -484,7 +492,7 @@ const regex = {
     identifiers: {
         // get a numExpression
         numExp: /<(.*?)>/m,
-        condition: /\((.+)\)/m,
+        condition: /\((.+?)\)|\|(.*?)\|/m,
         sysArg: /%(\d+)/m
     },
 
@@ -654,6 +662,8 @@ function main(line, index) { // ====================================== main ====
     
             if (varLine[2] === "=") {
                 varATB(varLine);
+                index++;
+                continue;
             }
         }
         
@@ -675,11 +685,7 @@ function main(line, index) { // ====================================== main ====
             // true || false
             let retn = new Condition(cond.join(" "));
     
-            while (typeof retn.return[0] === "object") {
-                retn.return = [...retn.return[0]];
-            }
-
-            retn.return = retn.return[0];
+            retn.return = formatCondReturn(retn);
             
             // detect the code block
             if (retn.return && line[index][line[index].length - 1] === "{") {
@@ -700,7 +706,7 @@ function main(line, index) { // ====================================== main ====
         }
 
         else if (((keyword !== null) ? keyword[0] : "") === "else") {
-            if (line[index][line[index].length - 2] === "{" && !auxCond) {
+            if (line[index][line[index].length - 1] === "{" && !auxCond) {
                 index++; //new line
                 let block = getBlock(line, index);
                 let auxIndex = 0;
@@ -720,7 +726,10 @@ function main(line, index) { // ====================================== main ====
         if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "print") {
             let funcName = regex.functions.getFunc.exec(funcLine);
             let full = regex.functions.getFull.exec(funcLine);
+
             let args = full[1].match(regex.functions.getArgs);
+
+            args = formatArgs(args, "format");
 
             let isFunc = false;
 

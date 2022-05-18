@@ -1,5 +1,0 @@
-var num = <2 * 5>
-
-if ($num == 10) {
-    print("o valor de ", $num.name, " é ", $num)
-}
