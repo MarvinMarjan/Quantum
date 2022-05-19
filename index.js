@@ -32,6 +32,10 @@ async function getFile(argv) {
     const encoding = "utf-8";
     let file = await fs.promises.readFile(argv, encoding);
 
+    if (argv === "./__qtm_cache.txt") {
+        fs.unlink(argv, () => {});
+    }
+
     return file;
 }
 
@@ -134,14 +138,19 @@ function getVar(name) {
 function getBlock(line, index) {
     let blockLine;
     let block = [];
+    let found = false;
 
     // get all lines inside the block
     blockLine = line.filter((v, i) => {
-        if (i >= index && v[0] !== "}") {
+        if (i >= index && v[0] !== "}" && !found) {
             return true;
         }
 
         else {
+            if (i >= index && v[0] === "}") {
+                found = true;
+            }
+
             return false;
         }
     });
@@ -382,6 +391,24 @@ function removeNull(array) {
     });
 }
 
+function formatCondition(cond) {
+    cond = cond[1].split(" ");   
+
+    cond.forEach((v, i) => {
+        if (regex.keywords.varIn.test(v)) {
+            let varName = regex.keywords.varIn.exec(v);
+
+            cond[i] = getVar(varName[1]).value;
+        }
+    });
+
+    cond.forEach((v, i) => {
+        cond[i] = qtRemove(v);
+    });
+
+    return cond;
+}
+
 /**
  * handling assignment and reassignment of variables
  * 
@@ -395,6 +422,12 @@ function varATB(varLine) {
             let varExp = varLine.input.match(regex.keywords.varIn);
             let aux = regex.identifiers.numExp.exec(varLine[3]);
             let rplcExp = aux[1];
+
+            varExp.forEach((v, i) => {
+                if (v.indexOf("$") === -1) {
+                    varExp.splice(i, 1);
+                }
+            });
 
             for (let i = 0; i < varExp.length; i++) {
                 varExp.forEach((v, i) => {
@@ -614,6 +647,8 @@ line.input += "\\n";
 // separating file lines
 line = line.input.split("\n");
 
+line = line.map(v => v.replace("\r", ""))
+
 // line index
 let index = 0;
 
@@ -623,7 +658,7 @@ main(line, index);
  * this function runs the entire program,
 it is inside a function to be reused in code blocks
  */
-function main(line, index) { // ====================================== main ========================================
+function main(line, index, ignore=null) { // ====================================== main ========================================
     while (line[index] !== undefined) {
         let funcLine = line[index].match(regex.functions.getFunc);
         let keyword = line[index].match(regex.keywords.getKeyWord);
@@ -633,15 +668,23 @@ function main(line, index) { // ====================================== main ====
             var varRTB_ln = line[index].match(regex.keywords.varRTB);
     
             if (varExists(varRTB_ln[1])) {
-                if (regex.identifiers.condition.test(varRTB_ln)) {
-                    vars[varRTB_ln[1]].value = String(condRetn(varRTB_ln.input, varRTB_ln)[3]);
-                }
+                //varRTB_ln[3] = formatArgs(varRTB_ln, "format")
 
-                else {
-                    vars[varRTB_ln[1]].value = qtRemove(varRTB_ln[3]);
-                }
+                varATB(varRTB_ln);
 
-                vars[varRTB_ln[1]].type = getType(varRTB_ln[3]);
+                // if (regex.identifiers.condition.test(varRTB_ln[3])) {
+                //     vars[varRTB_ln[1]].value = String(condRetn(varRTB_ln.input, varRTB_ln)[3]);
+                // }
+
+                // else if (regex.identifiers.numExp.test(varRTB_ln[3])) {
+                //     vars[varRTB_ln[1]].value = String(new NumExp(varRTB_ln[3]).result);
+                // }
+
+                // else {
+                //     vars[varRTB_ln[1]].value = qtRemove(varRTB_ln[3]);
+                // }
+
+                //vars[varRTB_ln[1]].type = getType(varRTB_ln[3]);
             }
     
             else {
@@ -672,15 +715,7 @@ function main(line, index) { // ====================================== main ====
             // gets the condition
             let cond = regex.identifiers.condition.exec(line[index]);
 
-            cond = cond[1].split(" ");    
-
-            cond.forEach((v, i) => {
-                if (regex.keywords.varIn.test(v)) {
-                    let varName = regex.keywords.varIn.exec(v);
-
-                    cond[i] = getVar(varName[1]).value;
-                }
-            });
+           cond = formatCondition(cond); 
 
             // true || false
             let retn = new Condition(cond.join(" "));
@@ -719,6 +754,37 @@ function main(line, index) { // ====================================== main ====
 
             else {
                 index = ignoreBlock(index, line);
+            }
+        }
+
+        else if (((keyword !== null) ? keyword[0] : "") === "while" && ignore !== "while") {
+            let cond = regex.identifiers.condition.exec(line[index]);
+            cond = formatCondition(cond);
+            let retn = new Condition(cond.join(" "));
+            let auxIndex = 0;
+            let condIndex = index;
+
+            retn.return = formatCondReturn(retn);
+
+            while (retn.return === true) {
+                auxIndex = 0;
+                let block = getBlock(line, index + 1);
+
+                auxIndex = main(block, auxIndex, "while");
+
+                let cond = regex.identifiers.condition.exec(line[condIndex]);
+                cond = formatCondition(cond);
+                let retn = new Condition(cond.join(" "));
+
+                retn.return = formatCondReturn(retn);
+
+                if (retn.return === false) {
+                    break;
+                }
+            }
+
+            if (retn.return === false) {
+                index = ignoreBlock(index, line)
             }
         }
         

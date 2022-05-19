@@ -1,192 +1,222 @@
 a variable with ? in the end it means it is not mandatory
 
-functions {
-    print: print a value in the console {
-        syntax {
-            print(args...)
-        }
-
-        example {
-            print("hello, world"),
-
-            print("my name is ", "paul")
-
-            print($*varname)
-        }
-    }
-
-    clear: clear the console {
-        syntax {
-            clear()
-        }
-    }
-
-    ip: ip handling {
-        syntax {
-            ip(ip_type)
-        }
-
-        exmaple {
-            var ip = ip("ipv4")
-
-            print($ip)
-        }
-
-        console {
-            ip*
-        }
-    }
-
-    file: file manipulation {
-        syntax {
-            file(mode, path, data?)
-        }
-
-        write {
-            assigning {
-                var fl = file("write", path, initial_data) // returns true if no errors occurred
-
-                print($fl) // true or false
-            }
-
-            normal {
-                file("write", path, initial_data)
-            }
-        }
-
-        read {
-            assigning {
-                var fl = file("read", path) // return the file content
-
-                print($fl)
-            }
-        }
+Interpreter {
+    commands {
+        qtm:
     }
 }
 
-keywords {
-    var: create a variable {
-        syntax {
-            var varName = varValue
-        }
+Language {
+    functions {
+        print: print a value in the console {
+            syntax {
+                print(args...)
+            }
 
-        example {
-            var num = 10
+            example {
+                print("hello, world"),
 
-            print($num)
-        }
+                print("my name is ", "paul")
 
-        console {
-            10
-        }
-
-        we can also reassign a value {
-            $num = 5
-
-            print($num)
-        }
-
-        print var type {
-            var str = "hello, world"
-            var num = 19
-
-            print($Num.type, " ", $str.type)
-
-            console {
-                number string
+                print($*varname)
             }
         }
 
-        print var name {
-            var num = 10
-
-            print($num.name)
-
-            console {
-                num
+        clear: clear the console {
+            syntax {
+                clear()
             }
         }
 
-        conditions {
-            var cond = (3 == 3)
+        ip: ip handling {
+            syntax {
+                ip(ip_type)
+            }
 
-            print($cond) // true
+            exmaple {
+                var ip = ip("ipv4")
+
+                print($ip)
+            }
+
+            console {
+                ip*
+            }
         }
 
-        numeric expressions {
-            var num = <3 * 2 + (2 + 2)>
+        file: file manipulation {
+            syntax {
+                file(mode, path, data?)
+            }
 
-            print($num) // 10
-        }
+            write {
+                assigning {
+                    var fl = file("write", path, initial_data) // returns true if no errors occurred
 
-        parameter vars {
-            -->> qtm /d apple banana
+                    print($fl) // true or false
+                }
 
-            /d means that the file to be interpreted will be the default (files/src.txt)
+                normal {
+                    file("write", path, initial_data)
+                }
+            }
 
-            apple: %1 (parameter 1)
-            banana: %2 (parameter 2)
+            read {
+                assigning {
+                    var fl = file("read", path) // return the file content
 
-            var param = %1 // "apple"
-
-            print($param)
-        }
-
-        console {
-            5
+                    print($fl)
+                }
+            }
         }
     }
 
-    if: conditional structure {
-        syntax {
-            if (condition == true) {
-                code
+    keywords {
+        var: create a variable {
+            syntax {
+                var varName = varValue
+            }
+
+            example {
+                var num = 10
+
+                print($num)
+            }
+
+            console {
+                10
+            }
+
+            we can also reassign a value {
+                $num = 5
+
+                print($num)
+            }
+
+            print var type {
+                var str = "hello, world"
+                var num = 19
+
+                print($Num.type, " ", $str.type)
+
+                console {
+                    number string
+                }
+            }
+
+            print var name {
+                var num = 10
+
+                print($num.name)
+
+                console {
+                    num
+                }
+            }
+
+            conditions {
+                var cond = (3 == 3)
+
+                print($cond) // true
+            }
+
+            numeric expressions {
+                var num = <3 * 2 + (2 + 2)>
+
+                print($num) // 10
+            }
+
+            parameter vars {
+                -->> qtm /d apple banana
+
+                /d means that the file to be interpreted will be the default (files/src.txt)
+
+                apple: %1 (parameter 1)
+                banana: %2 (parameter 2)
+
+                var param = %1 // "apple"
+
+                print($param)
+            }
+
+            console {
+                5
             }
         }
 
-        example {
-            if (2 == 2) {
-                print("equals 2")
+        if: conditional structure {
+            syntax {
+                if (condition == true) {
+                    code
+                }
+            }
+
+            example {
+                if (2 == 2) {
+                    print("equals 2")
+                }
+            }
+
+            operators {
+                == 
+                !=
+                >
+                <
+                >=
+                <=
+            }
+
+            console {
+                equals 2
             }
         }
 
-        operators {
-            == 
-            !=
-            >
-            <
-            >=
-            <=
-        }
+        else: executes a code block if the previous condition is false {
+            syntax {
+                if (condition) {
+                    block
+                }
 
-        console {
-            equals 2
-        }
-    }
-
-    else: executes a code block if the previous condition is false {
-        syntax {
-            if (condition) {
-                block
+                else {
+                    block
+                }
             }
 
-            else {
-                block
-            }
-        }
+            example {
+                if (3 != 3) {
+                    print("not equals")
+                }
 
-        example {
-            if (3 != 3) {
-                print("not equals")
+                else {
+                    print("false")
+                }
             }
 
-            else {
-                print("false")
+            console {
+                false
             }
         }
 
-        console {
-            false
+        while: executes a block of code while a condition is true {
+            syntax {
+                while (condition) {
+                    block
+                }
+            }
+
+            example {
+                while (2 == 2) {
+                    print("hello")
+                }
+
+                var num = 1
+
+                while ($num < 10) {
+                    print($num)
+
+                    $num = <$num + 1>
+                }
+            }
         }
     }
 }

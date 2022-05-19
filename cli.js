@@ -10,7 +10,12 @@ import { exec } from "child_process";
  */
 function getCommand() {
     if (process.argv[2] === undefined) {
-        return "./files/src.txt";
+        console.log(`${chalk.blueBright("Commands:")}\n\n${chalk.yellow("/c")} --> execute one or more language commands\n   --> example: qtm /c "print('hello, world')"\n   --> lines are separated by arguments\n   --> qtm /c "var num = 10" "print(@num)" // use "@" instead "$" while using /c`);
+
+        console.log(`\n${chalk.yellow("/e")} --> open a editor to run the interpreter --> ".run" to run, ".exit" to exit`)
+
+        fs.writeFileSync("__qtm_cache.txt", "");
+        return "__qtm_cache.txt";
     }
 
     
@@ -34,13 +39,9 @@ function getCommand() {
         str = str.replace(/'/gm, "\"");
         str = str.replace(/@/gm, "$"); // "$" is a meta char in cmd, so exchanged the "$" by "@" --- only in cmd -----------------
 
-        fs.writeFileSync("./files/src.txt", str)
+        fs.writeFileSync("./__qtm_cache.txt", str)
         
-        return "./files/src.txt";
-    }
-    
-    else if (process.argv[2] === "/d") {
-        return "./files/src.txt";
+        return "./__qtm_cache.txt";
     }
     
     else if (process.argv[2] === "/e") {
@@ -52,7 +53,7 @@ function getCommand() {
 
         let string = "";
         
-        fs.writeFileSync("./files/src.txt", "");
+        fs.writeFileSync("./__qtm_cache.txt", "");
 
         rd.on("line", (input) => {
             if (input === ".exit") {
@@ -60,15 +61,20 @@ function getCommand() {
             }
 
             else if (input === ".run") {
-                fs.writeFileSync("./files/src.txt", string);
-                exec("qtm");
+                fs.writeFileSync("./__qtm_cache.txt", string);
+                exec("qtm ./__qtm_cache.txt");
+
+                if (process.argv[3] === "-s") {
+                    fs.writeFileSync(process.argv[4], string);
+                }
+
                 rd.close();
             }
 
             string += input + "\n";
         });
 
-        return "./files/src.txt";
+        return "./__qtm_cache.txt";
     }
 
     else if (process.argv[2] !== undefined) {
