@@ -17,6 +17,7 @@ import error from "./modules/err.js";
 // node js
 import fs from "fs";
 import { exec } from "child_process";
+import opn from "opn";
 
 // terminal class instantiation
 const terminal = new Terminal("Terminal");
@@ -30,7 +31,7 @@ const terminal = new Terminal("Terminal");
 
 async function getFile(argv) {
     const encoding = "utf-8";
-    let file = await fs.promises.readFile(argv, encoding);
+    let file = await fs.promises.readFile(argv, encoding); // debug mode
 
     if (argv === "./__qtm_cache.txt") {
         fs.unlink(argv, () => {});
@@ -869,6 +870,18 @@ function main(line, index, ignore=null) { // ===================================
                 qtRmdArgs[2] = formatArgs([qtRmdArgs[2]], "format", true)[0]
                 returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
             }
+        }
+
+        else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "http") {
+            let args = regex.functions.getFull.exec(funcLine[0]);
+            args = args[1].match(regex.functions.getArgs);
+
+            let qtRmdArgs = args.map(qtRemove);
+            qtRmdArgs = removeNull(qtRmdArgs);
+
+            qtRmdArgs = formatArgs(qtRmdArgs);
+
+            opn(qtRmdArgs);
         }
     
         // next line
