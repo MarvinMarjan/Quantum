@@ -13,9 +13,10 @@ function getCommand() {
         console.log(`${chalk.blueBright("Commands:")}\n\n${chalk.yellow("/c")} --> execute one or more language commands\n   --> example: qtm /c "print('hello, world')"\n   --> lines are separated by arguments\n   --> qtm /c "var num = 10" "print(@num)" // use "@" instead "$" while using /c`);
 
         console.log(`\n${chalk.yellow("/e")} --> open a editor to run the interpreter --> ".run" to run, ".exit" to exit`)
+        console.log(`   ${chalk.blueBright("-s")} to save the editor data --> qtm /e -s (path)`)
 
         fs.writeFileSync("__qtm_cache.txt", "");
-        return "__qtm_cache.txt";
+        return "./__qtm_cache.txt";
     }
 
     

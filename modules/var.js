@@ -1,3 +1,5 @@
+import { qtRemove } from "../index.js";
+
 class Var {
     constructor(name, type, value) {
         this.name = name;
@@ -8,6 +10,10 @@ class Var {
             type: this.type,
             name: this.name
         };
+
+        if (this.prop.type === "string") {
+            this.prop.length = qtRemove(this.value).length
+        }
     }
 
     /**
