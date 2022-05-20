@@ -10,13 +10,28 @@ import { exec } from "child_process";
  */
 function getCommand() {
     if (process.argv[2] === undefined) {
-        console.log(`${chalk.blueBright("Commands:")}\n\n${chalk.yellow("/c")} --> execute one or more language commands\n   --> example: qtm /c "print('hello, world')"\n   --> lines are separated by arguments\n   --> qtm /c "var num = 10" "print(@num)" // use "@" instead "$" while using /c`);
+        try {
+            let json = fs.readFileSync("./__rt_config.json", "utf-8");
+            json = JSON.parse(json);
 
-        console.log(`\n${chalk.yellow("/e")} --> open a editor to run the interpreter --> ".run" to run, ".exit" to exit`)
-        console.log(`   ${chalk.blueBright("-s")} to save the editor data --> qtm /e -s (path)`)
+            let fileName = json.name;
+            let args = json.args;
+            args = args.join(" ");
 
-        fs.writeFileSync("__qtm_cache.txt", "");
-        return "./__qtm_cache.txt";
+            exec(`qtm ./${fileName} ${args}`)
+
+            return "local_runtime";
+        }
+
+        catch {
+            console.log(`${chalk.blueBright("Commands:")}\n\n${chalk.yellow("/c")} --> execute one or more language commands\n   --> example: qtm /c "print('hello, world')"\n   --> lines are separated by arguments\n   --> qtm /c "var num = 10" "print(@num)" // use "@" instead "$" while using /c`);
+    
+            console.log(`\n${chalk.yellow("/e")} --> open a editor to run the interpreter --> ".run" to run, ".exit" to exit`)
+            console.log(`   ${chalk.blueBright("-s")} to save the editor data --> qtm /e -s (path)`)
+    
+            fs.writeFileSync("__qtm_cache.txt", "");
+            return "./__qtm_cache.txt";
+        }
     }
 
     

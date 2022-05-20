@@ -28,10 +28,13 @@ const terminal = new Terminal("Terminal");
  * @param {*} argv file path 
  * @returns file content
  */
-
 async function getFile(argv) {
     const encoding = "utf-8";
-    let file = await fs.promises.readFile(argv, encoding); // debug mode
+    let file;
+
+    if (argv !== "local_runtime") {
+        file = await fs.promises.readFile(argv, encoding); // debug mode: "test.txt"
+    }
 
     if (argv === "./__qtm_cache.txt") {
         fs.unlink(argv, () => {});
@@ -517,7 +520,7 @@ const regex = {
         getFunc: /(\w+)\(.*\)/m,
 
         // get all args
-        getArgs: /(?:"(.*?)")?(\.?\d+\.?)?(\$\w+\.?\w+)?(true|false)?(<(.*?)>)?(\w+\(.+?\))?(\|(.+?)\|)?/gm,
+        getArgs: /(?:"(.*?)")?(\.?\d*\.?)?(\$\w*\.?\w*)?(true|false)?(<(.*?)>)?(\w*\(.*?\))?(\|(.*?)\|)?/gm,
 
         // get everything between parenthesis
         getFull: /\((.*)\)/m
@@ -526,25 +529,25 @@ const regex = {
     identifiers: {
         // get a numExpression
         numExp: /<(.*?)>/m,
-        condition: /\((.+?)\)|\|(.*?)\|/m,
-        sysArg: /%(\d+)/m
+        condition: /\((.*?)\)|\|(.*?)\|/m,
+        sysArg: /%(\d*)/m
     },
 
     // keywords regexs
     keywords: {
-        getKeyWord: /^\w+/gm,
+        getKeyWord: /^\w*/gm,
 
         // detect a var creation
-        var: /^(?:\w+)\s(\w+)\s?(=)\s?(.+)/gm,
+        var: /^(?:\w*)\s(\w*)\s?(=)\s?(.*)/gm,
 
         // var reassignment
-        varRTB: /^(?:\$)(\w+)\s?(=)\s?(.+)$/m,
+        varRTB: /^(?:\$)(\w*)\s?(=)\s?(.*)$/m,
 
         // gets var propertys
-        varProp: /(\w+)?/gm,
+        varProp: /(\w*)?/gm,
 
         // contains var
-        varIn: /\$(\w+)/m,
+        varIn: /\$(\w*)/m,
     }
 }
 
@@ -634,261 +637,308 @@ let returnFuncs = {
     }
 }
 
-/**
- * a string containing the file content
- */
-let line = file.match(regex.functions.print);
-
-/*
-  add a line break at the 
-  end of the file to solve a problem
- */
-line.input += "\\n";
-
-// separating file lines
-line = line.input.split("\n");
-
-line = line.map(v => v.replace("\r", ""))
-
-// line index
+//line index
 let index = 0;
 
-main(line, index);
+if (file !== undefined && file !== null && file != false) {
+    /**
+    * a string containing the file content
+    */
+    let line = file.match(regex.functions.print);
 
-/**
- * this function runs the entire program,
-it is inside a function to be reused in code blocks
- */
-function main(line, index, ignore=null) { // ====================================== main ========================================
-    while (line[index] !== undefined) {
-        let funcLine = line[index].match(regex.functions.getFunc);
-        let keyword = line[index].match(regex.keywords.getKeyWord);
-    
-        // detects a reassignment of a variable
-        if (regex.keywords.varRTB.test(line[index])) {
-            var varRTB_ln = line[index].match(regex.keywords.varRTB);
-    
-            if (varExists(varRTB_ln[1])) {
-                //varRTB_ln[3] = formatArgs(varRTB_ln, "format")
+    /*
+    add a line break at the 
+    end of the file to solve a problem
+    */
+    line.input += "\\n";
 
-                varATB(varRTB_ln);
+    // separating file lines
+    line = line.input.split("\n");
 
-                // if (regex.identifiers.condition.test(varRTB_ln[3])) {
-                //     vars[varRTB_ln[1]].value = String(condRetn(varRTB_ln.input, varRTB_ln)[3]);
-                // }
+    line = line.map(v => v.replace("\r", ""))
 
-                // else if (regex.identifiers.numExp.test(varRTB_ln[3])) {
-                //     vars[varRTB_ln[1]].value = String(new NumExp(varRTB_ln[3]).result);
-                // }
+    main(line, index);
 
-                // else {
-                //     vars[varRTB_ln[1]].value = qtRemove(varRTB_ln[3]);
-                // }
+    /**
+     * this function runs the entire program,
+    it is inside a function to be reused in code blocks
+    */
+    function main(line, index, in_loop=false) { // ====================================== main ========================================
+        while (line[index] !== undefined) {
+            let funcLine = line[index].match(regex.functions.getFunc);
+            let keyword = line[index].match(regex.keywords.getKeyWord);
+        
+            // detects a reassignment of a variable
+            if (regex.keywords.varRTB.test(line[index])) {
+                var varRTB_ln = line[index].match(regex.keywords.varRTB);
+        
+                if (varExists(varRTB_ln[1])) {
+                    //varRTB_ln[3] = formatArgs(varRTB_ln, "format")
 
-                //vars[varRTB_ln[1]].type = getType(varRTB_ln[3]);
+                    varATB(varRTB_ln);
+
+                    // if (regex.identifiers.condition.test(varRTB_ln[3])) {
+                    //     vars[varRTB_ln[1]].value = String(condRetn(varRTB_ln.input, varRTB_ln)[3]);
+                    // }
+
+                    // else if (regex.identifiers.numExp.test(varRTB_ln[3])) {
+                    //     vars[varRTB_ln[1]].value = String(new NumExp(varRTB_ln[3]).result);
+                    // }
+
+                    // else {
+                    //     vars[varRTB_ln[1]].value = qtRemove(varRTB_ln[3]);
+                    // }
+
+                    //vars[varRTB_ln[1]].type = getType(varRTB_ln[3]);
+                }
+        
+                else {
+                    error(`${varRTB_ln[1]} is undefined`);
+                }
             }
-    
-            else {
-                error(`${varRTB_ln[1]} is undefined`);
-            }
-        }
-    
-        // empty line
-        if (line[index] == false) {
-            index++;
-            continue;
-        }
-    
-        // detect if the keyword is "var"
-        if (regex.keywords.getKeyWord.test(line[index]) && keyword[0] === "var") {
-            let varLine = line[index].match(regex.keywords.var);
-            varLine = regex.keywords.var.exec(varLine);
-    
-            if (varLine[2] === "=") {
-                varATB(varLine);
+        
+            // empty line
+            if (line[index] == false) {
                 index++;
                 continue;
             }
-        }
         
-        // if keyword
-        else if (((keyword !== null) ? keyword[0] : "") === "if") {
-            // gets the condition
-            let cond = regex.identifiers.condition.exec(line[index]);
-
-           cond = formatCondition(cond); 
-
-            // true || false
-            let retn = new Condition(cond.join(" "));
-    
-            retn.return = formatCondReturn(retn);
+            // detect if the keyword is "var"
+            if (regex.keywords.getKeyWord.test(line[index]) && keyword[0] === "var") {
+                let varLine = line[index].match(regex.keywords.var);
+                varLine = regex.keywords.var.exec(varLine);
+        
+                if (varLine[2] === "=") {
+                    varATB(varLine);
+                    index++;
+                    continue;
+                }
+            }
             
-            // detect the code block
-            if (retn.return && line[index][line[index].length - 1] === "{") {
-                auxCond = true;
-                index++ // new line
-                let auxIndex = 0;
-                let block = getBlock(line, index);
+            // if keyword
+            else if (((keyword !== null) ? keyword[0] : "") === "if") {
+                // gets the condition
+                let cond = regex.identifiers.condition.exec(line[index]);
 
-                // executes the same function  main() running now, but for the code block
-                auxIndex = main(block, auxIndex);
+            cond = formatCondition(cond); 
 
-                index = auxIndex + index;
-            }
-
-            else {
-                index = ignoreBlock(index, line);
-            }
-        }
-
-        else if (((keyword !== null) ? keyword[0] : "") === "else") {
-            if (line[index][line[index].length - 1] === "{" && !auxCond) {
-                index++; //new line
-                let block = getBlock(line, index);
-                let auxIndex = 0;
-
-                auxIndex = main(block, auxIndex);
-
-                index = auxIndex + index;
-                auxCond = undefined;
-            }
-
-            else {
-                index = ignoreBlock(index, line);
-            }
-        }
-
-        else if (((keyword !== null) ? keyword[0] : "") === "while" && ignore !== "while") {
-            let cond = regex.identifiers.condition.exec(line[index]);
-            cond = formatCondition(cond);
-            let retn = new Condition(cond.join(" "));
-            let auxIndex = 0;
-            let condIndex = index;
-
-            retn.return = formatCondReturn(retn);
-
-            while (retn.return === true) {
-                auxIndex = 0;
-                let block = getBlock(line, index + 1);
-
-                auxIndex = main(block, auxIndex, "while");
-
-                let cond = regex.identifiers.condition.exec(line[condIndex]);
-                cond = formatCondition(cond);
+                // true || false
                 let retn = new Condition(cond.join(" "));
-
+        
                 retn.return = formatCondReturn(retn);
+                
+                // detect the code block
+                if (retn.return && line[index][line[index].length - 1] === "{") {
+                    auxCond = true;
+                    index++ // new line
+                    let auxIndex = 0;
+                    let block = getBlock(line, index);
 
-                if (retn.return === false) {
-                    break;
+                    // executes the same function  main() running now, but for the code block
+                    auxIndex = main(block, auxIndex, in_loop);
+
+                    if (auxIndex === "break") {
+                        if (in_loop) {
+                            return "break";
+                        }
+                    }
+
+                    else if (auxIndex === "continue") {
+                        if (in_loop) {
+                            return "continue";
+                        }
+                    }
+
+                    index = auxIndex + index;
+                }
+
+                else {
+                    index = ignoreBlock(index, line);
                 }
             }
 
-            if (retn.return === false) {
-                index = ignoreBlock(index, line)
+            else if (((keyword !== null) ? keyword[0] : "") === "else") {
+                if (line[index][line[index].length - 1] === "{" && !auxCond) {
+                    index++; //new line
+                    let block = getBlock(line, index);
+                    let auxIndex = 0;
+
+                    auxIndex = main(block, auxIndex, in_loop);
+
+                    if (auxIndex === "break") {
+                        if (in_loop) {
+                            return "break";
+                        }
+                    }
+
+                    else if (auxIndex === "continue") {
+                        if (in_loop) {
+                            return "continue";
+                        }
+                    }
+
+                    index = auxIndex + index;
+                    auxCond = undefined;
+                }
+
+                else {
+                    index = ignoreBlock(index, line);
+                }
             }
-        }
+
+            else if (((keyword !== null) ? keyword[0] : "") === "break") {
+                if (in_loop) {
+                    return "break";
+                }
+            }
+
+            else if (((keyword !== null) ? keyword[0] : "") === "continue") {
+                if (in_loop) {
+                    return "continue"
+                }
+            }
+
+            else if (((keyword !== null) ? keyword[0] : "") === "while") {
+                let cond = regex.identifiers.condition.exec(line[index]);
+                cond = formatCondition(cond);
+                let retn = new Condition(cond.join(" "));
+                let auxIndex = 0;
+                let condIndex = index;
+
+                retn.return = formatCondReturn(retn);
+
+                while (retn.return === true) {
+                    auxIndex = 0;
+                    let block = getBlock(line, index + 1);
+
+                    auxIndex = main(block, auxIndex, true);
+                    
+                    let cond = regex.identifiers.condition.exec(line[condIndex]);
+                    cond = formatCondition(cond);
+                    let retn = new Condition(cond.join(" "));
+                    
+                    retn.return = formatCondReturn(retn);
+                    
+                    if (retn.return === false) {
+                        break;
+                    }
+
+                    if (auxIndex === "break") {
+                        index = ignoreBlock(index, line);
+                        break;
+                    }
+
+                    else if (auxIndex === "continue") {
+                        continue;
+                    }
+                }
+
+                if (retn.return === false) {
+                    index = ignoreBlock(index, line)
+                }
+            }
+            
+            // detect if the function is "print"
+            if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "print") {
+                let funcName = regex.functions.getFunc.exec(funcLine);
+                let full = regex.functions.getFull.exec(funcLine);
+
+                let args = full[1].match(regex.functions.getArgs)
+
+                args = formatArgs(args, "format");
+
+                let isFunc = false;
+
+                if (findFuncArg(args) != false) {
+                    let indexes = findFuncArg(args);
+
+                    isFunc = true;
         
-        // detect if the function is "print"
-        if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "print") {
-            let funcName = regex.functions.getFunc.exec(funcLine);
-            let full = regex.functions.getFull.exec(funcLine);
-
-            let args = full[1].match(regex.functions.getArgs);
-
-            args = formatArgs(args, "format");
-
-            let isFunc = false;
-
-            if (findFuncArg(args) != false) {
-                let indexes = findFuncArg(args);
-
-                isFunc = true;
-    
-                indexes.forEach((v, i) => {
-                    let auxName = regex.functions.getFunc.exec(v.func);
-                    let auxArgs = regex.functions.getFull.exec(v.func);
-                    auxArgs = auxArgs[1].match(regex.functions.getArgs);
-    
-                    if (auxName[1] === "ip") {
-                        let total = "";
-    
-                        for (let o = 0; o < returnFuncs.ip.args; o++) {
-                            total += qtRemove(auxArgs[o]);
-                        }
-    
-                        args[i] = returnFuncs.ip.get(total);
-                    }
-
-                    else if (auxName[1] === "file") {
-                        let auxArgs = regex.functions.getFull.exec(auxName[0]);
+                    indexes.forEach((v, i) => {
+                        let auxName = regex.functions.getFunc.exec(v.func);
+                        let auxArgs = regex.functions.getFull.exec(v.func);
                         auxArgs = auxArgs[1].match(regex.functions.getArgs);
-
-                        let qtRmdArgs = removeNull(auxArgs.map(qtRemove));
-
-                        if (qtRmdArgs[0] === "write") {
-                            qtRmdArgs[2] = formatArgs([qtRmdArgs[2]], "format", true)[0]
-                            args[i] = returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
+        
+                        if (auxName[1] === "ip") {
+                            let total = "";
+        
+                            for (let o = 0; o < returnFuncs.ip.args; o++) {
+                                total += qtRemove(auxArgs[o]);
+                            }
+        
+                            args[i] = returnFuncs.ip.get(total);
                         }
 
-                        else if(qtRmdArgs[0] === "read") {
-                            qtRmdArgs[1] = formatArgs([qtRmdArgs[1]], "format", true)[0]
-                            args[i] = returnFuncs.file.read(qtRmdArgs[1]);
+                        else if (auxName[1] === "file") {
+                            let auxArgs = regex.functions.getFull.exec(auxName[0]);
+                            auxArgs = auxArgs[1].match(regex.functions.getArgs);
+
+                            let qtRmdArgs = removeNull(auxArgs.map(qtRemove));
+
+                            if (qtRmdArgs[0] === "write") {
+                                qtRmdArgs[2] = formatArgs([qtRmdArgs[2]], "format", true)[0]
+                                args[i] = returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
+                            }
+
+                            else if(qtRmdArgs[0] === "read") {
+                                qtRmdArgs[1] = formatArgs([qtRmdArgs[1]], "format", true)[0]
+                                args[i] = returnFuncs.file.read(qtRmdArgs[1]);
+                            }
                         }
-                    }
-                })
+                    })
+                }
+
+                let string = formatArgs(args, "concat", (isFunc) ? true : false);
+        
+                let aux = string;
+        
+                terminal.print(aux);
+            }
+        
+            // detect if the function is "clear"
+            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "clear") {
+                terminal.clear();
+            }
+        
+            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "exec") {
+                let aux = regex.functions.getFull.exec(funcLine[0]);
+                aux = formatArgs(aux[1].match(regex.functions.getArgs))//.input.match(regex.functions.getFull);
+
+                exec(aux);
             }
 
-            let string = formatArgs(args, "concat", (isFunc) ? true : false);
-    
-            let aux = string;
-    
-            terminal.print(aux);
-        }
-    
-        // detect if the function is "clear"
-        else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "clear") {
-            terminal.clear();
-        }
-    
-        else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "exec") {
-            let aux = regex.functions.getFull.exec(funcLine[0]);
-            aux = formatArgs(aux[1].match(regex.functions.getArgs))//.input.match(regex.functions.getFull);
+            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "file") {
+                let args = regex.functions.getFull.exec(funcLine[0]);
+                args = args[1].match(regex.functions.getArgs);
 
-            exec(aux);
-        }
+                let qtRmdArgs = args.map(qtRemove);
 
-        else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "file") {
-            let args = regex.functions.getFull.exec(funcLine[0]);
-            args = args[1].match(regex.functions.getArgs);
+                qtRmdArgs = removeNull(qtRmdArgs);
 
-            let qtRmdArgs = args.map(qtRemove);
-
-            qtRmdArgs = removeNull(qtRmdArgs);
-
-            if (qtRmdArgs[0] === "write") {
-                qtRmdArgs[2] = formatArgs([qtRmdArgs[2]], "format", true)[0]
-                returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
+                if (qtRmdArgs[0] === "write") {
+                    qtRmdArgs[2] = formatArgs([qtRmdArgs[2]], "format", true)[0]
+                    returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
+                }
             }
+
+            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "http") {
+                let args = regex.functions.getFull.exec(funcLine[0]);
+                args = args[1].match(regex.functions.getArgs);
+
+                let qtRmdArgs = args.map(qtRemove);
+                qtRmdArgs = removeNull(qtRmdArgs);
+
+                qtRmdArgs = formatArgs(qtRmdArgs);
+
+                opn(qtRmdArgs);
+            }
+        
+            // next line
+            index++;
         }
 
-        else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "http") {
-            let args = regex.functions.getFull.exec(funcLine[0]);
-            args = args[1].match(regex.functions.getArgs);
-
-            let qtRmdArgs = args.map(qtRemove);
-            qtRmdArgs = removeNull(qtRmdArgs);
-
-            qtRmdArgs = formatArgs(qtRmdArgs);
-
-            opn(qtRmdArgs);
-        }
-    
-        // next line
-        index++;
+        return index;
     }
-
-    return index;
 }
 
 export {qtRemove, getType};
