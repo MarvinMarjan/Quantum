@@ -1,3 +1,5 @@
+// last update: 09:14 - 21/05/2022
+
 /**
  * @copyright all rights reserved
  */
@@ -37,7 +39,7 @@ async function getFile(argv) {
     }
 
     if (argv === "./__qtm_cache.txt") {
-        fs.unlink(argv, () => {});
+        fs.unlink(argv, () => { });
     }
 
     return file;
@@ -52,14 +54,20 @@ async function getFile(argv) {
 function qtRemove(str) {
     let string = "";
 
-    for (let o = (str[0] === "\"") ? 1 : 0; o < str.length - ((str[str.length - 1] === "\"") ? 1 : 0); o++) {
-        if (str.indexOf("\"") === -1) {
-            string += str[o];
-        }
+    if (typeof str === "string") {
+        for (let o = (str[0] === "\"") ? 1 : 0; o < str.length - ((str[str.length - 1] === "\"") ? 1 : 0); o++) {
+            if (str.indexOf("\"") === -1) {
+                string += str[o];
+            }
 
-        else {
-            string += str[o];
+            else {
+                string += str[o];
+            }
         }
+    }
+
+    else {
+        string = str;
     }
 
     return string; // a string without quotes "
@@ -167,6 +175,10 @@ function getBlock(line, index) {
     return block;
 }
 
+/**
+ * @param {*} retn a condition return
+ * @returns 
+ */
 function formatCondReturn(retn) {
     while (typeof retn.return[0] === "object") {
         retn.return = [...retn.return[0]];
@@ -188,7 +200,7 @@ function condRetn(line, array) {
     let aux = line.match(regex.identifiers.condition);
 
     let result = new Condition(aux[1]);
-    
+
     array[3] = String((result.return));
 
     return array;
@@ -200,7 +212,7 @@ function condRetn(line, array) {
  * @param {*} funcLine a line containing a function
  * @returns all function arguments concatenated
  */
-function formatArgs(funcLine, mode="concat", ignore=false) {
+function formatArgs(funcLine, mode = "concat", ignore = false) {
     let string = "";
     let varName;
 
@@ -215,7 +227,7 @@ function formatArgs(funcLine, mode="concat", ignore=false) {
             funcLine[i] = String(result.result);
         }
 
-        if(regex.identifiers.condition.test(v) && !ignore) {
+        if (regex.identifiers.condition.test(v) && !ignore) {
             let aux = regex.identifiers.condition.exec(v);
             let result = new Condition(aux[2]);
 
@@ -223,7 +235,7 @@ function formatArgs(funcLine, mode="concat", ignore=false) {
         }
     });
 
-    
+
     for (let i = 0; i < funcLine.length; i++) {
         varName = undefined;
 
@@ -284,7 +296,7 @@ function formatArgs(funcLine, mode="concat", ignore=false) {
         return string;
     }
 
-    else if(mode === "format") {
+    else if (mode === "format") {
         let retr = funcLine.map(escapeChar)
 
         return retr;
@@ -351,6 +363,10 @@ function findFuncArg(arg) {
                 });
             }
         }
+
+        else {
+            indexes.push(v);
+        }
     });
 
     return indexes;
@@ -395,8 +411,14 @@ function removeNull(array) {
     });
 }
 
+/**
+ * returns the condition with the variables replaced by their value
+ * 
+ * @param {*} cond a condition
+ * @returns 
+ */
 function formatCondition(cond) {
-    cond = cond[1].split(" ");   
+    cond = cond[1].split(" ");
 
     cond.forEach((v, i) => {
         if (regex.keywords.varIn.test(v)) {
@@ -421,7 +443,7 @@ function formatCondition(cond) {
 function varATB(varLine) {
     if (regex.identifiers.numExp.test(varLine.input)) {
         let exp = varLine.input.match(regex.identifiers.numExp)
-        
+
         if (regex.keywords.varIn.test(varLine.input)) {
             let varExp = varLine.input.match(regex.keywords.varIn);
             let aux = regex.identifiers.numExp.exec(varLine[3]);
@@ -478,7 +500,6 @@ function varATB(varLine) {
             let concat = formatArgs(args, "format");
 
             let qtRmdArgs = concat.map(qtRemove);
-
             qtRmdArgs = removeNull(qtRmdArgs);
 
             if (qtRmdArgs[0] === "read") {
@@ -488,10 +509,14 @@ function varATB(varLine) {
             else if (qtRmdArgs[0] === "write") {
                 varLine[3] = returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
             }
+
+            else if (qtRmdArgs[0] === "rename") {
+                varLine[3] = returnFuncs.file.rename(qtRmdArgs[1], qtRmdArgs[2]);
+            }
         }
     }
 
-    else if (regex.identifiers.condition.test(varLine.input) ) {
+    else if (regex.identifiers.condition.test(varLine.input)) {
         varLine = condRetn(varLine.input, varLine);
     }
 
@@ -594,7 +619,7 @@ let returnFuncs = {
          * @param {*} type ip type to return
          * @returns ip
          */
-        get: function(type) {
+        get: function (type) {
             let ip = new Ip(type);
 
             return ip.return;
@@ -613,7 +638,7 @@ let returnFuncs = {
          * @param {*} path the path to the file
          * @returns file content
          */
-        read: function(path) {
+        read: function (path) {
             let file = new File("read", path);
 
             return file.return;
@@ -626,8 +651,14 @@ let returnFuncs = {
          * @param {*} data the content to be written to the file
          * @returns true if no error has occurred
          */
-        write: function(path, data) {
+        write: function (path, data) {
             let file = new File("write", path, data);
+
+            return file.return;
+        },
+
+        rename: function (oldPath, newPath) {
+            let file = new File("rename", [oldPath, newPath]);
 
             return file.return;
         },
@@ -640,6 +671,7 @@ let returnFuncs = {
 //line index
 let index = 0;
 
+// if file contains content
 if (file !== undefined && file !== null && file != false) {
     /**
     * a string containing the file content
@@ -663,15 +695,15 @@ if (file !== undefined && file !== null && file != false) {
      * this function runs the entire program,
     it is inside a function to be reused in code blocks
     */
-    function main(line, index, in_loop=false) { // ====================================== main ========================================
+    function main(line, index, in_loop = false) { // ====================================== main ========================================
         while (line[index] !== undefined) {
             let funcLine = line[index].match(regex.functions.getFunc);
             let keyword = line[index].match(regex.keywords.getKeyWord);
-        
+
             // detects a reassignment of a variable
-            if (regex.keywords.varRTB.test(line[index])) {
+            if (regex.keywords.varRTB.test(line[index])) { // $var = value
                 var varRTB_ln = line[index].match(regex.keywords.varRTB);
-        
+
                 if (varExists(varRTB_ln[1])) {
                     //varRTB_ln[3] = formatArgs(varRTB_ln, "format")
 
@@ -691,42 +723,42 @@ if (file !== undefined && file !== null && file != false) {
 
                     //vars[varRTB_ln[1]].type = getType(varRTB_ln[3]);
                 }
-        
+
                 else {
                     error(`${varRTB_ln[1]} is undefined`);
                 }
             }
-        
+
             // empty line
             if (line[index] == false) {
                 index++;
                 continue;
             }
-        
+
             // detect if the keyword is "var"
-            if (regex.keywords.getKeyWord.test(line[index]) && keyword[0] === "var") {
+            if (regex.keywords.getKeyWord.test(line[index]) && keyword[0] === "var") { // create a variable
                 let varLine = line[index].match(regex.keywords.var);
                 varLine = regex.keywords.var.exec(varLine);
-        
+
                 if (varLine[2] === "=") {
                     varATB(varLine);
                     index++;
                     continue;
                 }
             }
-            
+
             // if keyword
-            else if (((keyword !== null) ? keyword[0] : "") === "if") {
+            else if (((keyword !== null) ? keyword[0] : "") === "if") { // execute a block is condition is true
                 // gets the condition
                 let cond = regex.identifiers.condition.exec(line[index]);
 
-            cond = formatCondition(cond); 
+                cond = formatCondition(cond);
 
                 // true || false
                 let retn = new Condition(cond.join(" "));
-        
+
                 retn.return = formatCondReturn(retn);
-                
+
                 // detect the code block
                 if (retn.return && line[index][line[index].length - 1] === "{") {
                     auxCond = true;
@@ -757,7 +789,7 @@ if (file !== undefined && file !== null && file != false) {
                 }
             }
 
-            else if (((keyword !== null) ? keyword[0] : "") === "else") {
+            else if (((keyword !== null) ? keyword[0] : "") === "else") { // execute a block is the condition above is false
                 if (line[index][line[index].length - 1] === "{" && !auxCond) {
                     index++; //new line
                     let block = getBlock(line, index);
@@ -786,19 +818,19 @@ if (file !== undefined && file !== null && file != false) {
                 }
             }
 
-            else if (((keyword !== null) ? keyword[0] : "") === "break") {
+            else if (((keyword !== null) ? keyword[0] : "") === "break") { // break a loop
                 if (in_loop) {
                     return "break";
                 }
             }
 
-            else if (((keyword !== null) ? keyword[0] : "") === "continue") {
+            else if (((keyword !== null) ? keyword[0] : "") === "continue") { // return to the beginning of a loop
                 if (in_loop) {
                     return "continue"
                 }
             }
 
-            else if (((keyword !== null) ? keyword[0] : "") === "while") {
+            else if (((keyword !== null) ? keyword[0] : "") === "while") { // a conditional loop
                 let cond = regex.identifiers.condition.exec(line[index]);
                 cond = formatCondition(cond);
                 let retn = new Condition(cond.join(" "));
@@ -812,13 +844,13 @@ if (file !== undefined && file !== null && file != false) {
                     let block = getBlock(line, index + 1);
 
                     auxIndex = main(block, auxIndex, true);
-                    
+
                     let cond = regex.identifiers.condition.exec(line[condIndex]);
                     cond = formatCondition(cond);
                     let retn = new Condition(cond.join(" "));
-                    
+
                     retn.return = formatCondReturn(retn);
-                    
+
                     if (retn.return === false) {
                         break;
                     }
@@ -837,77 +869,90 @@ if (file !== undefined && file !== null && file != false) {
                     index = ignoreBlock(index, line)
                 }
             }
-            
+
             // detect if the function is "print"
-            if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "print") {
+            if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "print") { // prints a content in console
                 let funcName = regex.functions.getFunc.exec(funcLine);
                 let full = regex.functions.getFull.exec(funcLine);
 
                 let args = full[1].match(regex.functions.getArgs)
 
-                args = formatArgs(args, "format");
+                args = formatArgs(args, "format", true);
+                args = removeNull(args);
 
                 let isFunc = false;
 
                 if (findFuncArg(args) != false) {
                     let indexes = findFuncArg(args);
+                    indexes = removeNull(indexes);
+                    indexes = indexes.map(qtRemove);
 
                     isFunc = true;
-        
+
                     indexes.forEach((v, i) => {
-                        let auxName = regex.functions.getFunc.exec(v.func);
-                        let auxArgs = regex.functions.getFull.exec(v.func);
-                        auxArgs = auxArgs[1].match(regex.functions.getArgs);
-        
-                        if (auxName[1] === "ip") {
-                            let total = "";
-        
-                            for (let o = 0; o < returnFuncs.ip.args; o++) {
-                                total += qtRemove(auxArgs[o]);
-                            }
-        
-                            args[i] = returnFuncs.ip.get(total);
-                        }
-
-                        else if (auxName[1] === "file") {
-                            let auxArgs = regex.functions.getFull.exec(auxName[0]);
+                        if (typeof v === "object") {
+                            let auxName = regex.functions.getFunc.exec(v.func);
+                            let auxArgs = regex.functions.getFull.exec(v.func);
                             auxArgs = auxArgs[1].match(regex.functions.getArgs);
+                            auxArgs = removeNull(auxArgs);
 
-                            let qtRmdArgs = removeNull(auxArgs.map(qtRemove));
+                            if (auxName[1] === "ip") {
+                                let total = "";
 
-                            if (qtRmdArgs[0] === "write") {
-                                qtRmdArgs[2] = formatArgs([qtRmdArgs[2]], "format", true)[0]
-                                args[i] = returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
+                                for (let o = 0; o < returnFuncs.ip.args; o++) {
+                                    total += qtRemove(auxArgs[o]);
+                                }
+
+                                args[i] = returnFuncs.ip.get(total);
                             }
 
-                            else if(qtRmdArgs[0] === "read") {
-                                qtRmdArgs[1] = formatArgs([qtRmdArgs[1]], "format", true)[0]
-                                args[i] = returnFuncs.file.read(qtRmdArgs[1]);
+                            else if (auxName[1] === "file") {
+                                let auxArgs = regex.functions.getFull.exec(auxName[0]);
+                                auxArgs = auxArgs[1].match(regex.functions.getArgs);
+
+                                let qtRmdArgs = removeNull(auxArgs.map(qtRemove));
+
+                                if (qtRmdArgs[0] === "write") {
+                                    qtRmdArgs[2] = formatArgs([qtRmdArgs[2]], "format", true)[0]
+                                    args[i] = returnFuncs.file.write(qtRmdArgs[1], qtRmdArgs[2]);
+                                }
+
+                                else if (qtRmdArgs[0] === "read") {
+                                    qtRmdArgs[1] = formatArgs([qtRmdArgs[1]], "format", true)[0]
+                                    args[i] = returnFuncs.file.read(qtRmdArgs[1]);
+                                }
+
+                                else if (qtRmdArgs[0] === "rename") {
+                                    args[i] = returnFuncs.file.rename(qtRmdArgs[1], qtRmdArgs[2]);
+                                }
                             }
-                        }
-                    })
+                        }   
+                    });
+
+                    args = formatArgs(args, "format");
+                    args = args.map(qtRemove);
                 }
 
-                let string = formatArgs(args, "concat", (isFunc) ? true : false);
-        
+                let string = formatArgs(args, "concat");
+
                 let aux = string;
-        
+
                 terminal.print(aux);
             }
-        
+
             // detect if the function is "clear"
-            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "clear") {
+            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "clear") { // clears the console
                 terminal.clear();
             }
-        
-            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "exec") {
+
+            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "exec") { // execute a window command
                 let aux = regex.functions.getFull.exec(funcLine[0]);
                 aux = formatArgs(aux[1].match(regex.functions.getArgs))//.input.match(regex.functions.getFull);
 
                 exec(aux);
             }
 
-            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "file") {
+            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "file") { // write or read a file
                 let args = regex.functions.getFull.exec(funcLine[0]);
                 args = args[1].match(regex.functions.getArgs);
 
@@ -921,7 +966,7 @@ if (file !== undefined && file !== null && file != false) {
                 }
             }
 
-            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "http") {
+            else if (regex.functions.getFunc.test(funcLine) && funcLine[1] === "http") { // open a url in default browser
                 let args = regex.functions.getFull.exec(funcLine[0]);
                 args = args[1].match(regex.functions.getArgs);
 
@@ -930,9 +975,10 @@ if (file !== undefined && file !== null && file != false) {
 
                 qtRmdArgs = formatArgs(qtRmdArgs);
 
+                // open a url
                 opn(qtRmdArgs);
             }
-        
+
             // next line
             index++;
         }
@@ -941,4 +987,4 @@ if (file !== undefined && file !== null && file != false) {
     }
 }
 
-export {qtRemove, getType};
+export { qtRemove, getType };

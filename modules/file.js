@@ -1,3 +1,4 @@
+import { error } from "console";
 import fs from "fs"
 
 /**
@@ -19,6 +20,13 @@ class File {
 
         else if (type === "write") {
             this.return = this.write(path, data);
+        }
+
+        else if (type === "rename") {
+            let oldPath = path[0];
+            let newPath = path[1];
+
+            this.return = this.rename(oldPath, newPath);
         }
     }
 
@@ -48,6 +56,18 @@ class File {
 
         catch {
             return false
+        }
+    }
+
+    rename(oldPath, newPath) {
+        try {
+            fs.rename(oldPath, newPath, () => {});
+
+            return true
+        }
+
+        catch {
+            throw new Error(`couldn't rename the file: "${oldPath}"`);
         }
     }
 }

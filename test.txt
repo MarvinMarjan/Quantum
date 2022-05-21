@@ -1,4 +1,0 @@
-var name = %1
-var age = %2
-
-print("your name is: ", $name, ", and you age is: ", $age)
